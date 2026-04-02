@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATS Pro | Bulk Resume Extraction</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --panel-bg: rgba(30, 41, 59, 0.7);
+            --border-col: #334155;
+            --text-main: #f8fafc;
+            --text-sec: #94a3b8;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --success: #10b981;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            flex-direction: column;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            padding: 2rem;
+            background: var(--panel-bg);
+            border-radius: 24px;
+            border: 1px solid var(--border-col);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(12px);
+            text-align: center;
+            position: relative;
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.025em;
+        }
+
+        p.subtitle {
+            color: var(--text-sec);
+            font-size: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .upload-area {
+            border: 2px dashed var(--border-col);
+            border-radius: 16px;
+            padding: 3rem 2rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            background: rgba(15, 23, 42, 0.4);
+            margin-bottom: 1.5rem;
+        }
+
+        .upload-area:hover, .upload-area.dragover {
+            border-color: var(--accent);
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .file-input {
+            opacity: 0;
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            cursor: pointer;
+        }
+
+        .btn-submit {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 12px;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s, background 0.2s;
+            box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.5);
+        }
+
+        .btn-submit:hover {
+            background: var(--accent-hover);
+            transform: translateY(-2px);
+        }
+
+        .btn-submit:disabled {
+            background: var(--border-col);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Processing State */
+        .processing-state {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem 0;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid var(--border-col);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1.5rem;
+        }
+
+        .processing-text {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .processing-sub {
+            color: var(--text-sec);
+            font-size: 0.95rem;
+        }
+
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        
+        .blob {
+            position: absolute;
+            filter: blur(80px);
+            z-index: -1;
+            opacity: 0.5;
+        }
+        .blob-1 { top: -100px; left: -100px; width: 300px; height: 300px; background: rgba(59, 130, 246, 0.4); border-radius: 50%; }
+        .blob-2 { bottom: -100px; right: -100px; width: 400px; height: 400px; background: rgba(139, 92, 246, 0.3); border-radius: 50%; }
+
+    </style>
+</head>
+<body>
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+
+    <div class="container">
+        
+        <div id="upload-panel">
+            <h1>ATS Resume Extraction</h1>
+            <p class="subtitle">Bulk process 1000+ PDF resumes instantly to Excel</p>
+            <p id="execution-time" class="subtitle" style="color: var(--success); font-weight: 600; display: none; margin-bottom: 1.5rem;"></p>
+            
+            <form id="uploadForm">
+                <div class="upload-area" id="drop-zone">
+                    <span class="upload-icon">📂</span>
+                    <h3 id="file-name-display">Drag & Drop ZIP file here</h3>
+                    <p class="subtitle" style="margin-top:0.5rem; margin-bottom:0;">or click to browse</p>
+                    <input type="file" name="zipfile" id="file-input" class="file-input" accept=".zip" required>
+                </div>
+                <button type="submit" class="btn-submit" id="submit-btn" disabled>Process Resumes</button>
+            </form>
+        </div>
+
+        <div id="processing-panel" class="processing-state">
+            <div class="spinner"></div>
+            <div class="processing-text">Processing Resumes...</div>
+            <div class="processing-sub">This may take a few minutes for large batches (>1000 files). Do not close this tab.</div>
+        </div>
+        
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('file-input');
+        const fileNameDisplay = document.getElementById('file-name-display');
+        const submitBtn = document.getElementById('submit-btn');
+        const dropZone = document.getElementById('drop-zone');
+
+        // Drag and drop effects
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length) {
+                fileInput.files = e.dataTransfer.files;
+                updateFileDisplay();
+            }
+        });
+
+        fileInput.addEventListener('change', updateFileDisplay);
+
+        function updateFileDisplay() {
+            if (fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                if (!file.name.toLowerCase().endsWith('.zip')) {
+                    fileNameDisplay.innerHTML = `<span style="color: #ef4444;">Invalid file type. Please upload a .ZIP</span>`;
+                    submitBtn.disabled = true;
+                    return;
+                }
+                fileNameDisplay.textContent = file.name;
+                submitBtn.disabled = false;
+            } else {
+                fileNameDisplay.textContent = 'Drag & Drop ZIP file here';
+                submitBtn.disabled = true;
+            }
+        }
+
+        // Handle AJAX submit to prevent timeout spinning issues and provide real feedback
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            
+            document.getElementById('upload-panel').style.display = 'none';
+            document.getElementById('processing-panel').style.display = 'flex';
+            document.getElementById('execution-time').style.display = 'none';
+
+            const startTime = performance.now();
+
+            try {
+                const response = await fetch('/', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const endTime = performance.now();
+                    const timeSecs = ((endTime - startTime) / 1000).toFixed(2);
+
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'processed_resumes.xlsx';
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+                    
+                    // Reset UI
+                    document.getElementById('upload-panel').style.display = 'block';
+                    document.getElementById('processing-panel').style.display = 'none';
+                    fileInput.value = '';
+                    updateFileDisplay();
+                    
+                    // Show success time
+                    const execTimeEl = document.getElementById('execution-time');
+                    execTimeEl.style.display = 'block';
+                    execTimeEl.textContent = `✅ Batch processed successfully in ${timeSecs} seconds!`;
+                } else {
+                    const errText = await response.text();
+                    alert("Error processing files: " + errText);
+                    document.getElementById('upload-panel').style.display = 'block';
+                    document.getElementById('processing-panel').style.display = 'none';
+                }
+            } catch (error) {
+                alert("Network error occurred during upload/processing.");
+                document.getElementById('upload-panel').style.display = 'block';
+                document.getElementById('processing-panel').style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
