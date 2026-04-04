@@ -25,7 +25,8 @@ def get_nlp():
     global NLP
     if NLP is None:
         import spacy
-        NLP = spacy.load("en_core_web_sm")
+        # Disable unused components for much faster initialization and inference
+        NLP = spacy.load("en_core_web_sm", disable=["parser", "lemmatizer", "tagger", "attribute_ruler"])
     return NLP
 
 
@@ -34,13 +35,18 @@ def get_nlp():
 # ==========================================
 
 FINAL_HEADERS = [
-    "S.No", "Date", "Recruiter Name", "JD ID", "Client Name", "Job Role ", "IT/Non IT", 
-    "Source", "Candidate Name", "Mr./Ms./Mrs", "Gender", "Candidate Contact Number", "Email", 
-    "Calls Handled By", "Candidate Response", "Total Year Of Experience", "Relevant Year Of Experience", 
-    "Current_CTC", "Expected CTC", "Notice Period", "Current_Location", "State", "Preferred Location ", 
-    "Willing to Relocate", "Job Type", "Languages Known", "Current Company", "Years Worked in Current Company", 
-    "Undergraduate Degree", "Postgraduate Degree", "Skills", "Birth Year", "Age", "System Age", "Level", 
-    "Communication Rating", "Remarks", "Recruiter Remarks"
+    "File Name",
+    "Candidate Name",
+    "Candidate Contact Number",
+    "Email",
+    "Total Years of Experience",
+    "Skills",
+    "Current Company",
+    "Previous Companies",
+    "Current Location",
+    "Education (UG / PG Degree)",
+    "Languages Known",
+    "Years Worked in Current Company"
 ]
 
 EMAIL_REGEX = re.compile(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+')
@@ -57,18 +63,8 @@ UG_REGEX = re.compile(r'\b(B\.?E\.?|B\.?Tech|B\.?Sc\.?|B\.?Com\.?|B\.?B\.?A\.?|B
 PG_REGEX = re.compile(r'\b(M\.?E\.?|M\.?Tech|M\.?Sc\.?|MBA|M\.?C\.?A\.?|M\.?A\.?|Master(?:s|' + r"'" + r's)?\s*(?:of)?\s*(?:Engineering|Technology|Science|Commerce|Arts|Business|Computer|Business Administration))\b', re.IGNORECASE)
 
 INDIAN_CITIES = {
-    "mumbai": "Maharashtra", "pune": "Maharashtra", "nagpur": "Maharashtra", "nashik": "Maharashtra",
-    "delhi": "Delhi", "new delhi": "Delhi",
-    "bangalore": "Karnataka", "bengaluru": "Karnataka", "mysore": "Karnataka",
-    "hyderabad": "Telangana", "secunderabad": "Telangana",
-    "chennai": "Tamil Nadu", "coimbatore": "Tamil Nadu", "madurai": "Tamil Nadu",
-    "kolkata": "West Bengal",
-    "ahmedabad": "Gujarat", "surat": "Gujarat", "vadodara": "Gujarat",
-    "noida": "Uttar Pradesh", "lucknow": "Uttar Pradesh", "kanpur": "Uttar Pradesh",
-    "gurgaon": "Haryana", "gurugram": "Haryana",
-    "jaipur": "Rajasthan",
-    "bhubaneswar": "Odisha",
-    "kochi": "Kerala", "trivandrum": "Kerala", "thiruvananthapuram": "Kerala"
+    # Top Cities
+    "mumbai": "Maharashtra", "delhi": "Delhi", "bengaluru": "Karnataka", "ahmedabad": "Gujarat", "hyderabad": "Telangana", "chennai": "Tamil Nadu", "kolkata": "West Bengal", "pune": "Maharashtra", "jaipur": "Rajasthan", "surat": "Gujarat", "lucknow": "Uttar Pradesh", "kanpur": "Uttar Pradesh", "nagpur": "Maharashtra", "patna": "Bihar", "indore": "Madhya Pradesh", "thane": "Maharashtra", "bhopal": "Madhya Pradesh", "visakhapatnam": "Andhra Pradesh", "vadodara": "Gujarat", "firozabad": "Uttar Pradesh", "ludhiana": "Punjab", "rajkot": "Gujarat", "agra": "Uttar Pradesh", "siliguri": "West Bengal", "nashik": "Maharashtra", "faridabad": "Haryana", "patiala": "Punjab", "meerut": "Uttar Pradesh", "kalyan": "Maharashtra", "dombivali": "Maharashtra", "vasai": "Maharashtra", "virar": "Maharashtra", "varanasi": "Uttar Pradesh", "srinagar": "Jammu and Kashmir", "dhanbad": "Jharkhand", "jodhpur": "Rajasthan", "amritsar": "Punjab", "raipur": "Chhattisgarh", "allahabad": "Uttar Pradesh", "coimbatore": "Tamil Nadu", "jabalpur": "Madhya Pradesh", "gwalior": "Madhya Pradesh", "vijayawada": "Andhra Pradesh", "madurai": "Tamil Nadu", "guwahati": "Assam", "chandigarh": "Chandigarh", "hubli": "Karnataka", "dharwad": "Karnataka", "amroha": "Uttar Pradesh", "moradabad": "Uttar Pradesh", "gurgaon": "Haryana", "gurugram": "Haryana", "aligarh": "Uttar Pradesh", "solapur": "Maharashtra", "ranchi": "Jharkhand", "jalandhar": "Punjab", "tiruchirappalli": "Tamil Nadu", "bhubaneswar": "Odisha", "salem": "Tamil Nadu", "warangal": "Telangana", "thiruvananthapuram": "Kerala", "bhiwandi": "Maharashtra", "saharanpur": "Uttar Pradesh", "guntur": "Andhra Pradesh", "amravati": "Maharashtra", "bikaner": "Rajasthan", "noida": "Uttar Pradesh", "jamshedpur": "Jharkhand", "bhilai": "Chhattisgarh", "cuttack": "Odisha", "kochi": "Kerala", "udaipur": "Rajasthan", "bhavnagar": "Gujarat", "dehradun": "Uttarakhand", "asansol": "West Bengal", "nanded": "Maharashtra", "ajmer": "Rajasthan", "jamnagar": "Gujarat", "ujjain": "Madhya Pradesh", "sangli": "Maharashtra", "loni": "Uttar Pradesh", "jhansi": "Uttar Pradesh", "pondicherry": "Puducherry", "puducherry": "Puducherry", "nellore": "Andhra Pradesh", "jammu": "Jammu and Kashmir", "belagavi": "Karnataka", "belgaum": "Karnataka", "raurkela": "Odisha", "mangaluru": "Karnataka", "mangalore": "Karnataka", "tirunelveli": "Tamil Nadu", "malegaon": "Maharashtra", "gaya": "Bihar", "tiruppur": "Tamil Nadu", "davanagere": "Karnataka", "kozhikode": "Kerala", "akola": "Maharashtra", "kurnool": "Andhra Pradesh", "bokaro": "Jharkhand", "rajahmundry": "Andhra Pradesh", "ballari": "Karnataka", "bellary": "Karnataka", "agartala": "Tripura", "bhagalpur": "Bihar", "latur": "Maharashtra", "dhule": "Maharashtra", "korba": "Chhattisgarh", "bhilwara": "Rajasthan", "brahmapur": "Odisha", "mysore": "Karnataka", "mysuru": "Karnataka", "muzaffarpur": "Bihar", "ahmednagar": "Maharashtra", "kollam": "Kerala", "raghunathganj": "West Bengal", "bilaspur": "Chhattisgarh", "shahjahanpur": "Uttar Pradesh", "thrissur": "Kerala", "alwar": "Rajasthan", "kakinada": "Andhra Pradesh", "nizamabad": "Telangana", "sagar": "Madhya Pradesh", "tumkur": "Karnataka", "hisar": "Haryana", "rohtak": "Haryana", "panipat": "Haryana", "darbhanga": "Bihar", "kharagpur": "West Bengal", "aizawl": "Mizoram", "ichalkaranji": "Maharashtra", "tirupati": "Andhra Pradesh", "karnal": "Haryana", "bathinda": "Punjab", "rampur": "Uttar Pradesh", "shivamogga": "Karnataka", "ratlam": "Madhya Pradesh", "modinagar": "Uttar Pradesh", "durg": "Chhattisgarh", "shillong": "Meghalaya", "imphal": "Manipur", "hapur": "Uttar Pradesh", "ranipet": "Tamil Nadu", "anantapur": "Andhra Pradesh", "arrah": "Bihar", "karimnagar": "Telangana", "parbhani": "Maharashtra", "etawah": "Uttar Pradesh", "bharatpur": "Rajasthan", "begusarai": "Bihar", "new delhi": "Delhi", "chhapra": "Bihar", "kadapa": "Andhra Pradesh", "ramagundam": "Telangana", "pali": "Rajasthan", "satna": "Madhya Pradesh", "vizianagaram": "Andhra Pradesh", "katihar": "Bihar", "hardwar": "Uttarakhand", "haridwar": "Uttarakhand", "sonipat": "Haryana", "nagercoil": "Tamil Nadu", "thanjavur": "Tamil Nadu", "katni": "Madhya Pradesh", "naihati": "West Bengal", "sambhal": "Uttar Pradesh", "nadiad": "Gujarat", "yamunanagar": "Haryana", "secunderabad": "Telangana"
 }
 
 LANGUAGES = ["English", "Hindi", "Tamil", "Telugu", "Marathi", "Kannada", "Malayalam", "Gujarati", "Bengali", "Punjabi", "Urdu", "French", "German", "Spanish"]
@@ -130,12 +126,21 @@ def unzip_file(zip_path, extract_to=TEMP_FOLDER):
     return extract_to
 
 
+def sanitize_filename(filename):
+    # Remove extension and clean characters for Excel/Windows safety
+    name = os.path.splitext(filename)[0]
+    # Replace common resume junk with spaces
+    name = re.sub(r'(_| - | -|-|Resume|CV|Curriculum Vitae)', ' ', name, flags=re.IGNORECASE)
+    # Remove any extra characters that match regex, keeping letters and spaces
+    name = re.sub(r'[^A-Za-z\s\.]', '', name)
+    return ' '.join(name.split()).title()
+
 def get_files(folder):
     files = []
+    valid_extensions = (".pdf", ".docx")
     for root, _, filenames in os.walk(folder):
         for f in filenames:
-            f_lower = f.lower()
-            if f_lower.endswith(".pdf") or f_lower.endswith(".docx"):
+            if f.lower().endswith(valid_extensions) and not f.startswith("~$"):
                 files.append(os.path.join(root, f))
     return files
 
@@ -170,8 +175,8 @@ def extract_docx_data(file_path):
 
 
 def parse_text(text, hidden_emails):
-    # Initialize all default empty values
-    data = {k: "" for k in FINAL_HEADERS}
+    # Initialize all default empty values with a professional placeholder
+    data = {k: "Not Provided" for k in FINAL_HEADERS}
     
     if not text:
         return data
@@ -221,28 +226,23 @@ def parse_text(text, hidden_emails):
     except Exception:
         pass
     if not name:
-        ignore_words = {"resume", "curriculum vitae", "cv", "page", "email", "phone", "profile", "summary"}
-        for line in doc_text.split("\n"):
-            line_lower = line.lower()
-            if any(w in line_lower for w in ignore_words) or "@" in line or len(line) < 3 or len(line) > 60:
-                continue
-            if re.match(r"^[A-Za-z\s\.\-']+$", line):
-                if line.isupper() or line.istitle() or len(line.split()) >= 2:
-                    name = line.title()
-                    break
-    data["Candidate Name"] = name
+        # Fallback to filename if no name found in text
+        name = sanitize_filename(data.get('File Name', ''))
+        if not name or len(name) < 2:
+            name = "Not Provided"
+    
+    data["Candidate Name"] = name.strip().title() if name != "Not Provided" else "Not Provided"
 
     # 5. Experience
     exp_matches = EXP_REGEX.search(text)
     if exp_matches:
-        data["Total Year Of Experience"] = exp_matches.group(1)
+        data["Total Years of Experience"] = exp_matches.group(1)
 
-    # 6. Location and State
-    text_lower_head = doc_text.lower() # search in top part
+    # 6. Location
+    text_lower_head = doc_text.lower()
     for city, state in INDIAN_CITIES.items():
         if re.search(r'\b' + re.escape(city) + r'\b', text_lower_head):
-            data["Current_Location"] = city.title()
-            data["State"] = state
+            data["Current Location"] = city.title()
             break
 
     # 7. Known Languages
@@ -253,60 +253,63 @@ def parse_text(text, hidden_emails):
         data["Languages Known"] = ", ".join(sorted(list(found_langs)))
 
     # 8. Degrees
+    degrees = []
     ug_match = UG_REGEX.search(text)
     if ug_match:
-        data["Undergraduate Degree"] = ug_match.group(1).strip()
-    
+        degrees.append(ug_match.group(1).strip())
     pg_match = PG_REGEX.search(text)
     if pg_match:
-        data["Postgraduate Degree"] = pg_match.group(1).strip()
+        degrees.append(pg_match.group(1).strip())
+    if degrees:
+        data["Education (UG / PG Degree)"] = " / ".join(degrees)
 
-    # 9. Notice Period & CTC
-    np_match = NP_REGEX.search(text)
-    if np_match:
-        data["Notice Period"] = np_match.group(1).strip()
-    
-    ctc_match = CTC_REGEX.search(text)
-    if ctc_match:
-        data["Current_CTC"] = ctc_match.group(1).strip()
-    
-    ectc_match = ECTC_REGEX.search(text)
-    if ectc_match:
-        data["Expected CTC"] = ectc_match.group(1).strip()
-
-    # 10. Birth Year and Age
-    dob_match = DOB_REGEX.search(text)
-    if dob_match:
-        year_str = dob_match.group(2)
-        if len(year_str) == 2:
-            year = int("19" + year_str) if int(year_str) > 30 else int("20" + year_str)
-        else:
-            year = int(year_str)
-        data["Birth Year"] = str(year)
-        data["Age"] = str(datetime.now().year - year)
-
-    # 11. Gender
-    if re.search(r'\b(?:Male|Female)\b', text, re.IGNORECASE):
-        m = re.search(r'\b(Male|Female)\b', text, re.IGNORECASE)
-        data["Gender"] = m.group(1).title()
-
-    # 12. Current Company Heuristic
-    # Look for "Experience" or "Work Experience" section
+    # 9. Companies & Years Worked in Current Company
     exp_idx = re.search(r'\b(?:Experience|Employment History|Work Experience)\b', text, re.IGNORECASE)
     if exp_idx:
-        # Check text right after it
-        post_exp_text = text[exp_idx.end():exp_idx.end() + 1000]
+        post_exp_text = text[exp_idx.end():exp_idx.end() + 1500]
+
+        # Calculate Years Worked in Current Company
+        # Match year ranges: "Jan 2018 - 2022", "2021 to Present"
+        date_pattern = r'((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)?[a-z]*[\s\,]*\d{4})\s*(?:-|–|to)\s*((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)?[a-z]*[\s\,]*\d{4}|Present|Current|Till Date|Today)'
+        first_date_range = re.search(date_pattern, post_exp_text, re.IGNORECASE)
+        if first_date_range:
+            start_str, end_str = first_date_range.groups()
+            start_yr_match = re.search(r'(\d{4})', start_str)
+            end_yr_match = re.search(r'(\d{4})', end_str)
+
+            if start_yr_match:
+                start_yr = int(start_yr_match.group(1))
+                if re.search(r'Present|Current|Till|Today', end_str, re.IGNORECASE):
+                    end_yr = datetime.now().year
+                elif end_yr_match:
+                    end_yr = int(end_yr_match.group(1))
+                else:
+                    end_yr = start_yr
+                
+                yr_diff = end_yr - start_yr
+                if yr_diff == 0:
+                    data["Years Worked in Current Company"] = "< 1 Year"
+                elif 0 < yr_diff < 40:
+                    data["Years Worked in Current Company"] = f"{yr_diff} Years"
+
+        # Find Current and Previous Companies
         try:
             nlp = get_nlp()
             nlp_doc = nlp(post_exp_text)
+            orgs = []
+            
+            ignore_orgs = {'school', 'college', 'university', 'institute', 'pvt ltd', 'private limited', 'inc', 'llc'}
             for ent in nlp_doc.ents:
                 if ent.label_ == "ORG":
-                    # Avoid common false positives
-                    if ent.text.lower() not in ['school', 'college', 'university', 'institute']:
-                        org_name = ent.text.strip().replace("\n", " ")
-                        if len(org_name) > 3:
-                            data["Current Company"] = org_name
-                            break
+                    org_name = ent.text.strip().replace("\n", " ")
+                    if len(org_name) > 3 and org_name.lower() not in ignore_orgs:
+                        if org_name not in orgs:
+                            orgs.append(org_name)
+            
+            if orgs:
+                data["Current Company"] = orgs[0]
+            if len(orgs) > 1:
+                data["Previous Companies"] = ", ".join(orgs[1:4])
         except Exception:
             pass
 
@@ -323,10 +326,15 @@ def process_file(file_path):
             
         res = parse_text(text, hidden_emails)
         res['File Name'] = file_name
+        
+        # Last check - if name is still empty, use sanitized file name
+        if res.get('Candidate Name') == "Not Provided":
+            res['Candidate Name'] = sanitize_filename(file_name)
+            
         return res
     except Exception:
         # Return empty data with just the file name
-        res = {k: "" for k in FINAL_HEADERS}
+        res = {k: "Not Provided" for k in FINAL_HEADERS}
         res['File Name'] = file_name
         res['Candidate Name'] = "Error Extracting"
         return res
@@ -336,7 +344,8 @@ def process_all(files):
     if not files:
         return []
 
-    workers = min(32, multiprocessing.cpu_count() * 2)
+    # Limit workers to physical cores to avoid thrashing RAM/CPU with too many SpaCy instances
+    workers = min(4, multiprocessing.cpu_count())
     chunk_sz = max(1, len(files) // workers)
     
     with ProcessPoolExecutor(max_workers=workers) as executor:
@@ -377,6 +386,47 @@ def index():
 
             output_file = os.path.join(OUTPUT_FOLDER, "processed_resumes.xlsx")
             df.to_excel(output_file, index=False)
+
+            # Apply neat styling to match requested layout
+            from openpyxl import load_workbook
+            from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
+            from openpyxl.utils import get_column_letter
+
+            wb = load_workbook(output_file)
+            ws = wb.active
+
+            header_fill = PatternFill(start_color="1B5586", end_color="1B5586", fill_type="solid")
+            header_font = Font(color="FFFFFF", bold=True)
+            center_align = Alignment(horizontal="center", vertical="center")
+            
+            thin_border = Border(
+                left=Side(style='thin', color='000000'),
+                right=Side(style='thin', color='000000'),
+                top=Side(style='thin', color='000000'),
+                bottom=Side(style='thin', color='000000')
+            )
+
+            # Format Headers
+            for col_num, cell in enumerate(ws[1], 1):
+                cell.fill = header_fill
+                cell.font = header_font
+                cell.alignment = center_align
+                cell.border = thin_border
+                
+                # Auto-adjust width (roughly)
+                col_letter = get_column_letter(col_num)
+                ws.column_dimensions[col_letter].width = 26
+
+            # Format Data rows (borders & alternating colors)
+            stripe_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
+            for row_idx, row in enumerate(ws.iter_rows(min_row=2, max_row=ws.max_row, max_col=ws.max_column), 2):
+                for cell in row:
+                    cell.border = thin_border
+                    cell.alignment = Alignment(vertical="center", wrap_text=True)
+                    if row_idx % 2 == 0:
+                        cell.fill = stripe_fill
+
+            wb.save(output_file)
 
             shutil.rmtree(folder, ignore_errors=True)
             if os.path.exists(zip_path):
