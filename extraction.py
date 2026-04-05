@@ -4,12 +4,14 @@ import zipfile
 import shutil
 import fitz  # PyMuPDF
 import pandas as pd
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 from flask import Flask, request, render_template, send_file
+from flask_cors import CORS
 import multiprocessing
 from datetime import datetime
 
 app = Flask(__name__, template_folder='.')
+CORS(app)
 
 UPLOAD_FOLDER = "uploads"
 OUTPUT_FOLDER = "outputs"
@@ -18,16 +20,9 @@ TEMP_FOLDER = "temp_resumes"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
-# lazily loaded SpaCy NLP pipeline for Name extraction to prevent heavy OS overhead per worker
+# No AI Model Needed - Pure Regex for Ultimate Speed
 NLP = None
-
-def get_nlp():
-    global NLP
-    if NLP is None:
-        import spacy
-        # Disable unused components for much faster initialization and inference
-        NLP = spacy.load("en_core_web_sm", disable=["parser", "lemmatizer", "tagger", "attribute_ruler"])
-    return NLP
+def get_nlp(): return None
 
 
 # ==========================================
@@ -50,7 +45,7 @@ FINAL_HEADERS = [
 ]
 
 EMAIL_REGEX = re.compile(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+')
-PHONE_REGEX = re.compile(r'\+?\d[\d\s\-\(\)]{8,20}\d')
+PHONE_REGEX = re.compile(r'(?:\+?\d[\d\s\-\(\)]{8,20}\d|\(\d{3}\)\s*\d{3}-\d{4})')
 
 EXP_REGEX = re.compile(r'\b(\d{1,2}(?:\.\d{1,2})?)\s*(?:\+?\s*)?(?:years?|yrs?|y)\b.*?(?:of)?\s*(?:exp(?:erience)?)\b', re.IGNORECASE)
 DOB_REGEX = re.compile(r'(?:DOB|Date of[ \-]Birth)\s*[:\-]?\s*([\d]{1,2}[/\-\.][\d]{1,2}[/\-\.]([\d]{2,4}))', re.IGNORECASE)
@@ -62,9 +57,26 @@ ECTC_REGEX = re.compile(r'(?:Expected CTC|ECTC)\s*[:\-]?\s*([\d\.]+\s*(?:LPA|L|l
 UG_REGEX = re.compile(r'\b(B\.?E\.?|B\.?Tech|B\.?Sc\.?|B\.?Com\.?|B\.?B\.?A\.?|B\.?C\.?A\.?|B\.?A\.?|Bachelor(?:s|' + r"'" + r's)?\s*(?:of)?\s*(?:Engineering|Technology|Science|Commerce|Arts|Business|Computer))\b', re.IGNORECASE)
 PG_REGEX = re.compile(r'\b(M\.?E\.?|M\.?Tech|M\.?Sc\.?|MBA|M\.?C\.?A\.?|M\.?A\.?|Master(?:s|' + r"'" + r's)?\s*(?:of)?\s*(?:Engineering|Technology|Science|Commerce|Arts|Business|Computer|Business Administration))\b', re.IGNORECASE)
 
+# Extended City and Location list for Indian & Global candidates
 INDIAN_CITIES = {
-    # Top Cities
-    "mumbai": "Maharashtra", "delhi": "Delhi", "bengaluru": "Karnataka", "ahmedabad": "Gujarat", "hyderabad": "Telangana", "chennai": "Tamil Nadu", "kolkata": "West Bengal", "pune": "Maharashtra", "jaipur": "Rajasthan", "surat": "Gujarat", "lucknow": "Uttar Pradesh", "kanpur": "Uttar Pradesh", "nagpur": "Maharashtra", "patna": "Bihar", "indore": "Madhya Pradesh", "thane": "Maharashtra", "bhopal": "Madhya Pradesh", "visakhapatnam": "Andhra Pradesh", "vadodara": "Gujarat", "firozabad": "Uttar Pradesh", "ludhiana": "Punjab", "rajkot": "Gujarat", "agra": "Uttar Pradesh", "siliguri": "West Bengal", "nashik": "Maharashtra", "faridabad": "Haryana", "patiala": "Punjab", "meerut": "Uttar Pradesh", "kalyan": "Maharashtra", "dombivali": "Maharashtra", "vasai": "Maharashtra", "virar": "Maharashtra", "varanasi": "Uttar Pradesh", "srinagar": "Jammu and Kashmir", "dhanbad": "Jharkhand", "jodhpur": "Rajasthan", "amritsar": "Punjab", "raipur": "Chhattisgarh", "allahabad": "Uttar Pradesh", "coimbatore": "Tamil Nadu", "jabalpur": "Madhya Pradesh", "gwalior": "Madhya Pradesh", "vijayawada": "Andhra Pradesh", "madurai": "Tamil Nadu", "guwahati": "Assam", "chandigarh": "Chandigarh", "hubli": "Karnataka", "dharwad": "Karnataka", "amroha": "Uttar Pradesh", "moradabad": "Uttar Pradesh", "gurgaon": "Haryana", "gurugram": "Haryana", "aligarh": "Uttar Pradesh", "solapur": "Maharashtra", "ranchi": "Jharkhand", "jalandhar": "Punjab", "tiruchirappalli": "Tamil Nadu", "bhubaneswar": "Odisha", "salem": "Tamil Nadu", "warangal": "Telangana", "thiruvananthapuram": "Kerala", "bhiwandi": "Maharashtra", "saharanpur": "Uttar Pradesh", "guntur": "Andhra Pradesh", "amravati": "Maharashtra", "bikaner": "Rajasthan", "noida": "Uttar Pradesh", "jamshedpur": "Jharkhand", "bhilai": "Chhattisgarh", "cuttack": "Odisha", "kochi": "Kerala", "udaipur": "Rajasthan", "bhavnagar": "Gujarat", "dehradun": "Uttarakhand", "asansol": "West Bengal", "nanded": "Maharashtra", "ajmer": "Rajasthan", "jamnagar": "Gujarat", "ujjain": "Madhya Pradesh", "sangli": "Maharashtra", "loni": "Uttar Pradesh", "jhansi": "Uttar Pradesh", "pondicherry": "Puducherry", "puducherry": "Puducherry", "nellore": "Andhra Pradesh", "jammu": "Jammu and Kashmir", "belagavi": "Karnataka", "belgaum": "Karnataka", "raurkela": "Odisha", "mangaluru": "Karnataka", "mangalore": "Karnataka", "tirunelveli": "Tamil Nadu", "malegaon": "Maharashtra", "gaya": "Bihar", "tiruppur": "Tamil Nadu", "davanagere": "Karnataka", "kozhikode": "Kerala", "akola": "Maharashtra", "kurnool": "Andhra Pradesh", "bokaro": "Jharkhand", "rajahmundry": "Andhra Pradesh", "ballari": "Karnataka", "bellary": "Karnataka", "agartala": "Tripura", "bhagalpur": "Bihar", "latur": "Maharashtra", "dhule": "Maharashtra", "korba": "Chhattisgarh", "bhilwara": "Rajasthan", "brahmapur": "Odisha", "mysore": "Karnataka", "mysuru": "Karnataka", "muzaffarpur": "Bihar", "ahmednagar": "Maharashtra", "kollam": "Kerala", "raghunathganj": "West Bengal", "bilaspur": "Chhattisgarh", "shahjahanpur": "Uttar Pradesh", "thrissur": "Kerala", "alwar": "Rajasthan", "kakinada": "Andhra Pradesh", "nizamabad": "Telangana", "sagar": "Madhya Pradesh", "tumkur": "Karnataka", "hisar": "Haryana", "rohtak": "Haryana", "panipat": "Haryana", "darbhanga": "Bihar", "kharagpur": "West Bengal", "aizawl": "Mizoram", "ichalkaranji": "Maharashtra", "tirupati": "Andhra Pradesh", "karnal": "Haryana", "bathinda": "Punjab", "rampur": "Uttar Pradesh", "shivamogga": "Karnataka", "ratlam": "Madhya Pradesh", "modinagar": "Uttar Pradesh", "durg": "Chhattisgarh", "shillong": "Meghalaya", "imphal": "Manipur", "hapur": "Uttar Pradesh", "ranipet": "Tamil Nadu", "anantapur": "Andhra Pradesh", "arrah": "Bihar", "karimnagar": "Telangana", "parbhani": "Maharashtra", "etawah": "Uttar Pradesh", "bharatpur": "Rajasthan", "begusarai": "Bihar", "new delhi": "Delhi", "chhapra": "Bihar", "kadapa": "Andhra Pradesh", "ramagundam": "Telangana", "pali": "Rajasthan", "satna": "Madhya Pradesh", "vizianagaram": "Andhra Pradesh", "katihar": "Bihar", "hardwar": "Uttarakhand", "haridwar": "Uttarakhand", "sonipat": "Haryana", "nagercoil": "Tamil Nadu", "thanjavur": "Tamil Nadu", "katni": "Madhya Pradesh", "naihati": "West Bengal", "sambhal": "Uttar Pradesh", "nadiad": "Gujarat", "yamunanagar": "Haryana", "secunderabad": "Telangana"
+    'mumbai': 'Mumbai', 'delhi': 'Delhi', 'bangalore': 'Bangalore', 'bengaluru': 'Bangalore', 'hyderabad': 'Hyderabad', 'ahmedabad': 'Ahmedabad',
+    'chennai': 'Chennai', 'kolkata': 'Kolkata', 'surat': 'Surat', 'pune': 'Pune', 'jaipur': 'Jaipur', 'lucknow': 'Lucknow',
+    'kanpur': 'Kanpur', 'nagpur': 'Nagpur', 'indore': 'Indore', 'thane': 'Thane', 'bhopal': 'Bhopal', 'visakhapatnam': 'Visakhapatnam',
+    'pimpri': 'Pimpri', 'patna': 'Patna', 'vadodara': 'Vadodara', 'ghaziabad': 'Ghaziabad', 'ludhiana': 'Ludhiana', 'agra': 'Agra',
+    'nashik': 'Nashik', 'faridabad': 'Faridabad', 'meerut': 'Meerut', 'rajkot': 'Rajkot', 'kalyan': 'Kalyan', 'vasai': 'Vasai',
+    'varanasi': 'Varanasi', 'srinagar': 'Srinagar', 'aurangabad': 'Aurangabad', 'dhanbad': 'Dhanbad', 'amritsar': 'Amritsar',
+    'navi mumbai': 'Navi Mumbai', 'allahabad': 'Allahabad', 'howrah': 'Howrah', 'gwalior': 'Gwalior', 'jabalpur': 'Jabalpur',
+    'coimbatore': 'Coimbatore', 'vijayawada': 'Vijayawada', 'jodhpur': 'Jodhpur', 'madurai': 'Madurai', 'raipur': 'Raipur',
+    'kota': 'Kota', 'chandigarh': 'Chandigarh', 'guwahati': 'Guwahati', 'solapur': 'Solapur', 'hubli': 'Hubli', 'bareilly': 'Bareilly',
+    'moradabad': 'Moradabad', 'mysore': 'Mysore', 'gurgaon': 'Gurgaon', 'gurugram': 'Gurugram', 'noida': 'Noida', 'kochi': 'Kochi',
+    'thiruvananthapuram': 'Thiruvananthapuram', 'bhubaneswar': 'Bhubaneswar', 'salem': 'Salem', 'warangal': 'Warangal', 'guntur': 'Guntur',
+    'bhiwandi': 'Bhiwandi', 'saharanpur': 'Saharanpur', 'amravati': 'Amravati', 'bikaner': 'Bikaner', 'nanded': 'Nanded', 'kolhapur': 'Kolhapur',
+    'ajmer': 'Ajmer', 'gulbarga': 'Gulbarga', 'jamnagar': 'Jamnagar', 'ujsain': 'Ujjain', 'lonavala': 'Lonavala', 'siliguri': 'Siliguri',
+    'erode': 'Erode', 'hosur': 'Hosur', 'tirupur': 'Tirupur', 'vellore': 'Vellore', 'tuticorin': 'Tuticorin', 'nellore': 'Nellore',
+    'banaras': 'Varanasi', 'trichy': 'Tiruchirappalli', 'tiruchirappalli': 'Tiruchirappalli', 'prayagraj': 'Allahabad',
+    'san francisco': 'San Francisco', 'new york': 'New York', 'london': 'London', 'dubai': 'Dubai', 'singapore': 'Singapore', 'seattle': 'Seattle',
+    'austin': 'Austin', 'boston': 'Boston', 'chicago': 'Chicago', 'palo alto': 'Palo Alto', 'mountain view': 'Mountain View',
+    'india': 'India', 'usa': 'USA', 'united states': 'USA', 'uk': 'UK', 'united kingdom': 'UK', 'canada': 'Canada', 'australia': 'Australia'
 }
 
 LANGUAGES = ["English", "Hindi", "Tamil", "Telugu", "Marathi", "Kannada", "Malayalam", "Gujarati", "Bengali", "Punjabi", "Urdu", "French", "German", "Spanish"]
@@ -106,12 +118,63 @@ SKILL_ALIASES = {
     "php": "PHP", "laravel": "Laravel",
     "go": "Go", "golang": "Go",
     "rust": "Rust", "swift": "Swift", "kotlin": "Kotlin", "dart": "Dart",
-    "html": "HTML", "css": "CSS", "bootstrap": "Bootstrap", "tailwind": "Tailwind"
+    "html": "HTML", "css": "CSS", "bootstrap": "Bootstrap", "tailwind": "Tailwind", "terraform": "Terraform",
+    "sap fico": "SAP FICO", "tally": "Tally", "tally erp": "Tally", "gst": "GST", "taxation": "Taxation", 
+    "auditing": "Auditing", "financial analysis": "Financial Analysis", "financial modeling": "Financial Modeling",
+    "banking": "Banking", "accounting": "Accounting", "ms excel": "MS Excel", "excel": "MS Excel", "advanced excel": "Advanced Excel",
+    "autocad": "AutoCAD", "solidworks": "SolidWorks", "catia": "CATIA", "pro-e": "Pro-E", "proe": "Pro-E", 
+    "gd&t": "GD&T", "gdt": "GD&T", "lean manufacturing": "Lean Manufacturing", "six sigma": "Six Sigma",
+    "staad pro": "STAAD Pro", "revit": "Revit", "primavera p6": "Primavera P6", "primavera": "Primavera P6", 
+    "ms project": "MS Project", "estimation": "Estimation", "quantity surveying": "Quantity Surveying", "is codes": "IS Codes",
+    "brand management": "Brand Management", "digital marketing": "Digital Marketing", "market research": "Market Research", 
+    "trade marketing": "Trade Marketing", "btl": "BTL Activation", "ms powerpoint": "MS PowerPoint", "google analytics": "Google Analytics",
+    "photoshop": "Adobe Photoshop", "illustrator": "Adobe Illustrator", "indesign": "Adobe InDesign", "figma": "Figma", 
+    "coreldraw": "CorelDRAW", "premiere pro": "Adobe Premiere Pro", "ui/ux": "UI/UX", "social media creatives": "Social Media Creatives",
+    "outbound sales": "Sales", "insurance": "Insurance Products", "lead conversion": "Lead Conversion", "leadsquared": "LeadSquared",
+    "negotiation": "Negotiation", "siem": "SIEM", "splunk": "Splunk", "qradar": "QRadar", "threat hunting": "Threat Hunting",
+    "incident response": "Incident Response", "vulnerability assessment": "Vulnerability Assessment", "ceh": "CEH Certified",
+    "security+": "Security+", "owasp": "OWASP Top 10", "firewall": "Firewall Management", "unity": "Unity 3D",
+    "c# scripting": "C# Scripting", "shader graph": "Shader Graph", "photon": "Photon Networking", "agile": "Agile", "scrum": "Scrum",
+    "recruitment": "Recruitment & Selection", "payroll": "Payroll Processing", "hrms": "HRMS", "darwinbox": "Darwinbox",
+    "onboarding": "Onboarding", "statutory compliance": "Statutory Compliance", "compliance": "Statutory Compliance",
+    "employee engagement": "Employee Engagement", "sap hr": "SAP HR"
 }
 STRICT_C_SKILLS = {"C": "C", "R": "R"}
 SORTED_ALIASES = sorted(list(SKILL_ALIASES.keys()), key=len, reverse=True)
 SKILL_PATTERN = re.compile(r'\b(' + '|'.join(re.escape(s) for s in SORTED_ALIASES) + r')\b', re.IGNORECASE)
 STRICT_PATTERN = re.compile(r'\b(C|R)\b')
+
+# Organizations and Descriptions to ignore during Company extraction
+IGNORE_ORGS = {
+    'school', 'college', 'university', 'institute', 'pvt ltd', 'private limited', 'inc', 'llc', 'corporation',
+    'express', 'react', 'python', 'java', 'aws', 'amazon web services',
+    'data scientist', 'software engineer', 'developer', 'account executive', 'lead', 'marketing',
+    'boston', 'miami', 'columbia', 'duke', 'university of miami', 'boston university', 'duke university',
+    'experince', 'experience', 'education', 'skills', 'profile', 'summary', 'about me', 'contact',
+    'project', 'responsibilities', 'achievements', 'internship', 'trainee', 'student', 'analyst', 'manager',
+    'senior', 'junior', 'associate', 'lead', 'chief', 'head', 'coordinator', 'specialist', 'assistant', 'officer',
+    'scientist', 'engineer', 'developer', 'consultant', 'accountant', 'executive', 'nih', 'grant', 'funding', 'investigator',
+    # Added "Action Verbs" to prevent job descriptions from being extracted as companies
+    'led', 'built', 'developed', 'managed', 'created', 'designed', 'architected', 'improved', 'implemented', 'performed',
+    'researched', 'analyzed', 'conducted', 'monitored', 'maintained', 'supported', 'assisted', 'coordinated', 'mentored',
+    'increased', 'reduced', 'saved', 'optimized', 'scaled', 'modeled', 'deployed', 'migrated', 'automated', 'integrated',
+    'place', 'date', 'declaration', 'signature', 'statement', 'hereby', 'truthful', 'correct', 'best of my knowledge',
+    'b.com', 'bcom', 'm.sc', 'msc', 'b.a', 'ba', 'm.a', 'ma', 'b.e', 'm.e', 'b.tech', 'm.tech', 'mba', 'mca', 'bca',
+    'implemented', 'attended', 'handled', 'prepared', 'assisted', 'reconciliation', 'management', 'services', 'coloring', 'styling', 'attending', 'executing'
+}
+
+# High-Confidence Predefined Organization List (Ensures major names are never missed)
+PREDEFINED_ORGS = {
+    'Reliance', 'TCS', 'Infosys', 'Wipro', 'HCL', 'Accenture', 'Cognizant', 'Capgemini', 'IBM', 'Google', 'Microsoft', 
+    'Amazon', 'Slice', 'Unacademy', 'Byjus', 'Airtel', 'Jio', 'Deloitte', 'PWC', 'EY', 'KPMG', 'HDFC', 'ICICI', 'SBI', 
+    'Axis', 'L&T', 'Godrej', 'Tata', 'Tech Mahindra', 'Cognizant', 'Mindtree', 'Oracle', 'Cisco', 'Adobe', 'Swiggy', 
+    'Zomato', 'Ola', 'Uber', 'Paytm', 'PhonePe', 'Flipkart', 'Snapdeal', 'Myntra', 'Freshworks', 'Zoho', 'Postman',
+    'Tech Mahindra', 'Vistara', 'IndiGo', 'Mahindra', 'Bajaj', 'Adani', 'Vedanta', 'Asian Paints', 'Titan'
+}
+IGNORE_TITLES = {
+    'B.A.', 'B.S.', 'B.B.A.', 'M.A.', 'M.S.', 'MBA', 'B.Tech', 'M.Tech', 'Engineering', 'Economics', 
+    'Marketing', 'Design', 'Science', 'Arts', 'Fellow', 'Postdoctoral', 'Computer Science', 'UC Berkeley', 'NYU'
+}
 
 
 def unzip_file(zip_path, extract_to=TEMP_FOLDER):
@@ -126,12 +189,14 @@ def unzip_file(zip_path, extract_to=TEMP_FOLDER):
     return extract_to
 
 
+NAME_REGEX = re.compile(r'^[A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,2}$')
+
 def sanitize_filename(filename):
     # Remove extension and clean characters for Excel/Windows safety
     name = os.path.splitext(filename)[0]
     # Replace common resume junk with spaces
-    name = re.sub(r'(_| - | -|-|Resume|CV|Curriculum Vitae)', ' ', name, flags=re.IGNORECASE)
-    # Remove any extra characters that match regex, keeping letters and spaces
+    name = re.sub(r'(_| - | -|-|Resume|CV|Curriculum Vitae|Job|Apply)', ' ', name, flags=re.IGNORECASE)
+    # Remove digits and extra symbols
     name = re.sub(r'[^A-Za-z\s\.]', '', name)
     return ' '.join(name.split()).title()
 
@@ -167,16 +232,32 @@ def extract_docx_data(file_path):
     try:
         import docx
         doc = docx.Document(file_path)
+        # 1. Extract from paragraphs
         for para in doc.paragraphs:
-            text += para.text + "\n"
-    except Exception:
-        pass
+            if para.text.strip():
+                text += para.text + "\n"
+        # 2. Extract from tables (Crucial for modern resumes like Priya Reddy's)
+        for table in doc.tables:
+            for row in table.rows:
+                row_text = []
+                for cell in row.cells:
+                    if cell.text.strip():
+                        row_text.append(cell.text.strip())
+                if row_text:
+                    text += " | ".join(row_text) + "\n"
+    except Exception as e:
+        print(f"DOCX Extraction Error ({os.path.basename(file_path)}): {e}")
     return text, []
 
 
-def parse_text(text, hidden_emails):
-    # Initialize all default empty values with a professional placeholder
+def parse_text(text, hidden_emails, file_name="Not Provided"):
+    # Common position titles to ignore or split
+    # Common position titles to ignore or split
+    ROLE_WORDS = {"Manager", "Scientist", "Developer", "Analyst", "Engineer", "Executive", "Associate", "Lead", "Senior", "Junior", "Coordinator", "Nurse", "RN", "Consultant", "Specialist", "Director", "Product", "Early", "Stage", "GTM", "Gtm"}
+    
+    # Initialize all default empty values with professional placeholder
     data = {k: "Not Provided" for k in FINAL_HEADERS}
+    data["File Name"] = file_name
     
     if not text:
         return data
@@ -192,11 +273,7 @@ def parse_text(text, hidden_emails):
     phones = PHONE_REGEX.findall(text)
     for p in phones:
         digits = re.sub(r'\D', '', p)
-        if len(digits) == 10 and digits[0] in "6789":
-            data["Candidate Contact Number"] = p.strip(); break
-        elif len(digits) == 11 and digits.startswith("0") and digits[1] in "6789":
-            data["Candidate Contact Number"] = p.strip(); break
-        elif len(digits) == 12 and digits.startswith("91") and digits[2] in "6789":
+        if len(digits) >= 10:
             data["Candidate Contact Number"] = p.strip(); break
 
     # 3. Skills
@@ -211,39 +288,52 @@ def parse_text(text, hidden_emails):
             found_skills.add(STRICT_C_SKILLS[token])
     data["Skills"] = ", ".join(sorted(list(found_skills)))
 
-    # 4. Name
+    # 4. Name (Super-Fast Regex First)
     name = ""
-    doc_text = "\n".join([line.strip() for line in text.split("\n")][:25])
-    doc_text = doc_text[:600]
-    try:
-        nlp = get_nlp()
-        nlp_doc = nlp(doc_text)
-        for ent in nlp_doc.ents:
-            if ent.label_ == "PERSON":
-                if len(ent.text.strip()) > 2 and "\n" not in ent.text:
-                    name = ent.text.strip().title()
-                    break
-    except Exception:
-        pass
-    if not name:
-        # Fallback to filename if no name found in text
-        name = sanitize_filename(data.get('File Name', ''))
-        if not name or len(name) < 2:
-            name = "Not Provided"
-    
-    data["Candidate Name"] = name.strip().title() if name != "Not Provided" else "Not Provided"
+    lines = [l.strip() for l in text.split("\n") if len(l.strip()) > 3][:10]
+    for line in lines:
+        if NAME_REGEX.match(line):
+            temp_name = line.strip().title()
+            # Clean salutations (Mr, Ms, Mrs, etc.)
+            temp_name = re.sub(r'^(Mr|Ms|Mrs|Miss)\.?\s+', '', temp_name, flags=re.IGNORECASE)
+            
+            # If the name is just a job title, skip it
+            if any(title.lower() in temp_name.lower() for title in ["Manager", "Scientist", "Developer", "Analyst", "Engineer"]):
+                continue
+            name = temp_name; break
 
-    # 5. Experience
+    if not name:
+        name = sanitize_filename(data.get('File Name', '')) or "Not Provided"
+    
+    data["Candidate Name"] = name.strip()
+
+    # 4b. Location (Search entire text)
+    text_lower = text.lower()
+    for city, _ in INDIAN_CITIES.items():
+        if re.search(r'\b' + re.escape(city) + r'\b', text_lower):
+            data["Current Location"] = city.title(); break
+
+
+
+
+
+    # 5. Experience (Direct extraction or total calculation)
     exp_matches = EXP_REGEX.search(text)
     if exp_matches:
-        data["Total Years of Experience"] = exp_matches.group(1)
+        data["Total Years of Experience"] = f"{exp_matches.group(1)} Years"
+    else:
+        # Fallback: Sum up years from date ranges
+        date_ranges = re.findall(r'(\d{4})\s*(?:-|–|to)\s*(\d{4}|Present|Current|Today)', text, re.IGNORECASE)
+        total_yrs = 0
+        for start, end in date_ranges:
+            s_yr = int(start)
+            e_yr = datetime.now().year if re.search(r'Present|Current|Today|Till Date', end, re.IGNORECASE) else int(end)
+            if 0 < (e_yr - s_yr) < 40: total_yrs += (e_yr - s_yr)
+        if total_yrs > 0:
+            data["Total Years of Experience"] = f"{total_yrs} Years (Est.)"
 
-    # 6. Location
-    text_lower_head = doc_text.lower()
-    for city, state in INDIAN_CITIES.items():
-        if re.search(r'\b' + re.escape(city) + r'\b', text_lower_head):
-            data["Current Location"] = city.title()
-            break
+
+    # 6. Location (Redundant search removed)
 
     # 7. Known Languages
     found_langs = set()
@@ -266,11 +356,11 @@ def parse_text(text, hidden_emails):
     # 9. Companies & Years Worked in Current Company
     exp_idx = re.search(r'\b(?:Experience|Employment History|Work Experience)\b', text, re.IGNORECASE)
     if exp_idx:
-        post_exp_text = text[exp_idx.end():exp_idx.end() + 1500]
+        post_exp_text = text[exp_idx.end():exp_idx.end() + 4000]
 
         # Calculate Years Worked in Current Company
-        # Match year ranges: "Jan 2018 - 2022", "2021 to Present"
-        date_pattern = r'((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)?[a-z]*[\s\,]*\d{4})\s*(?:-|–|to)\s*((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)?[a-z]*[\s\,]*\d{4}|Present|Current|Till Date|Today)'
+        # Match year ranges: "Jan 2018 - 2022", "(2021 to Present)", support –, —, -
+        date_pattern = r'\(?((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)?[a-z]*[\s\,]*\d{4})\s*(?:-|–|—|to)\s*((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)?[a-z]*[\s\,]*\d{4}|Present|Current|Till Date|Today)\)?'
         first_date_range = re.search(date_pattern, post_exp_text, re.IGNORECASE)
         if first_date_range:
             start_str, end_str = first_date_range.groups()
@@ -290,28 +380,119 @@ def parse_text(text, hidden_emails):
                 if yr_diff == 0:
                     data["Years Worked in Current Company"] = "< 1 Year"
                 elif 0 < yr_diff < 40:
-                    data["Years Worked in Current Company"] = f"{yr_diff} Years"
+                    data["Years Worked in Current Company"] = f"{yr_diff}"
 
-        # Find Current and Previous Companies
-        try:
-            nlp = get_nlp()
-            nlp_doc = nlp(post_exp_text)
-            orgs = []
+        # 9c. Find Current and Previous Companies (Grammar & Length Based Strategy)
+        lines = [l.strip() for l in post_exp_text.split("\n") if len(l.strip()) > 3][:40]
+        found_orgs_with_dates = []
+        found_orgs_fallback = []
+        
+        # Action verbs that indicate a description, NOT a company name
+        ACTION_VERBS = {
+            'led', 'built', 'developed', 'managed', 'created', 'designed', 'architected', 'improved', 'implemented', 
+            'performed', 'researched', 'analyzed', 'conducted', 'monitored', 'maintained', 'supported', 'assisted', 
+            'coordinated', 'mentored', 'increased', 'reduced', 'saved', 'optimized', 'scaled', 'modeled', 'deployed', 
+            'migrated', 'automated', 'integrated', 'achieved', 'raised', 'prepared', 'executed', 'grew', 'supervise',
+            'implement', 'management', 'handling', 'preparation', 'assisting', 'attending', 'attended', 'managing'
+        }
+        COMPANY_KW = r'\b(?:Pvt|Ltd|Limited|Corp|Inc|Company|Agency|Solutions|Firm|Bank|Unicorn|Startup|Systems|Research|Aerospace|Financial|XYZ|Co|Intl|Global|Manufacturing|Institution|PDX|Hospital|Medical|Clinic|Center|Health|Services|Tech|Software|Technologies|District|CPA)\b'
+        
+        # Stricter Date Pattern for individual lines
+        STRICT_DATE_RE = re.compile(r'\b(20\d{2}|Present|Current|Till|Today)\b', re.IGNORECASE)
+        
+        for line in lines:
+            # Section Guard: Don't extract companies from the Declaration/Personal section
+            if any(term in line.lower() for term in ["declaration", "personal details", "signature", "hobbies", "interest"]):
+                break
+
+            # 1. Strip leading bullets/symbols to find the real start of text
+            line_clean = re.sub(r'^[•\-\*\d\.\s]+', '', line)
             
-            ignore_orgs = {'school', 'college', 'university', 'institute', 'pvt ltd', 'private limited', 'inc', 'llc'}
-            for ent in nlp_doc.ents:
-                if ent.label_ == "ORG":
-                    org_name = ent.text.strip().replace("\n", " ")
-                    if len(org_name) > 3 and org_name.lower() not in ignore_orgs:
-                        if org_name not in orgs:
-                            orgs.append(org_name)
+            # Hard skip for lines starting with lowercase (likely descriptions)
+            if line_clean and line_clean[0].islower():
+                continue
+                
+            words = line_clean.split()
+            first_word_clean = re.sub(r'[^A-Za-z]', '', words[0]).lower() if words else ""
             
-            if orgs:
-                data["Current Company"] = orgs[0]
-            if len(orgs) > 1:
-                data["Previous Companies"] = ", ".join(orgs[1:4])
-        except Exception:
-            pass
+            # Hard skip for education and junk action lines (Prefix check for verbs)
+            if len(words) > 7 or any(first_word_clean.startswith(v) for v in ACTION_VERBS) or first_word_clean in ['bcom', 'msc', 'mba', 'btech', 'mtech', 'account']:
+                continue
+            
+            # 2. Extract potential company part (Simplified Pipe/Comma Splitting)
+            temp_part = line
+            if "|" in line:
+                parts = [p.strip() for p in line.split("|")]
+                temp_part = parts[0]
+            elif "," in line and re.search(r'\d{4}', line):
+                # Handle "Slice (Earlier Slicepay), Bengaluru" - split by first comma if date exists
+                temp_part = line.split(",")[0]
+            elif " at " in line.lower():
+                temp_part = re.split(r'\s+at\s+', line, flags=re.IGNORECASE)[-1]
+            
+            # 3. Clean and validate company name (Remove positions from name)
+            clean_name = re.sub(r'^[•\-\*\d\.\s]+', '', temp_part) 
+            # Remove text in parentheses like "(Earlier Slicepay)"
+            clean_name = re.sub(r'\(.*?\)', '', clean_name).strip()
+            clean_name = re.sub(r'\s*\b(Present|Current|Till Date|Today)\b.*', '', clean_name, flags=re.IGNORECASE)
+            
+            # STRIKE: Remove actual position words from the name
+            for rw in ROLE_WORDS:
+                clean_name = re.sub(r'\b' + re.escape(rw) + r'\b', '', clean_name, flags=re.IGNORECASE)
+            
+            clean_name = re.sub(r'\d{4}', '', clean_name)
+            clean_name = re.sub(r'[^A-Za-z\s\.\&\-]', '', clean_name).strip()
+            
+            # Final validation: check length and non-lower start
+            if len(clean_name) < 3 or len(clean_name) > 50 or (clean_name and clean_name[0].islower()): continue
+            if any(title.lower() in clean_name.lower() for title in IGNORE_TITLES): continue
+
+            # 4. Score confidence (Look for ANY date on the line)
+            is_current = re.search(r'\b(Present|Current|Today|Till Date)\b', line, re.IGNORECASE)
+            has_any_date = STRICT_DATE_RE.search(line)
+            
+            # HIGH CONFIDENCE: Check against our predefined list first
+            is_predefined = any(po.lower() in clean_name.lower() for po in PREDEFINED_ORGS)
+            
+            # If it has a date, a Company keyword, or is a Predefined brand
+            if is_predefined or re.search(COMPANY_KW, clean_name, re.IGNORECASE) or has_any_date:
+                if not any(w.lower() in clean_name.lower() for w in IGNORE_ORGS):
+                    # If it's predefined, use the canonical name from our list
+                    if is_predefined:
+                        for po in PREDEFINED_ORGS:
+                            if po.lower() in clean_name.lower():
+                                clean_name = po
+                                break
+                    
+                    if is_current:
+                        found_orgs_with_dates.append(clean_name)
+                    else:
+                        found_orgs_fallback.append(clean_name)
+
+        # 10. Assign based on confidence (Strict History separation)
+        current_company = "Not Provided"
+        previous_list = []
+        
+        # 1. Lock in the "Present" company first
+        if found_orgs_with_dates:
+            current_company = found_orgs_with_dates[0]
+            # Any other "Present" or "Fallback" companies go to history
+            other_potential = found_orgs_with_dates[1:] + found_orgs_fallback
+        else:
+            if found_orgs_fallback:
+                current_company = found_orgs_fallback[0]
+                other_potential = found_orgs_fallback[1:]
+            else:
+                other_potential = []
+
+        # 2. Collect unique previous companies
+        for o in other_potential:
+            if o.lower() != current_company.lower() and o.lower() not in [p.lower() for p in previous_list]:
+                previous_list.append(o)
+
+        data["Current Company"] = current_company
+        if previous_list:
+            data["Previous Companies"] = ", ".join(previous_list[:5])
 
     return data
 
@@ -320,37 +501,33 @@ def process_file(file_path):
     file_name = os.path.basename(file_path)
     try:
         if file_path.lower().endswith(".docx"):
-            text, hidden_emails = extract_docx_data(file_path)
+            extracted_text, hidden_emails = extract_docx_data(file_path)
         else:
-            text, hidden_emails = extract_pdf_data(file_path)
+            extracted_text, hidden_emails = extract_pdf_data(file_path)
             
-        res = parse_text(text, hidden_emails)
-        res['File Name'] = file_name
+        res = parse_text(extracted_text, hidden_emails, file_name)
+
         
         # Last check - if name is still empty, use sanitized file name
         if res.get('Candidate Name') == "Not Provided":
             res['Candidate Name'] = sanitize_filename(file_name)
             
         return res
-    except Exception:
+    except Exception as e:
+        print(f"Processing Error ({file_name}): {e}")
         # Return empty data with just the file name
         res = {k: "Not Provided" for k in FINAL_HEADERS}
         res['File Name'] = file_name
-        res['Candidate Name'] = "Error Extracting"
+        res['Candidate Name'] = f"Error: {str(e)[:30]}"
         return res
 
 
 def process_all(files):
-    if not files:
-        return []
-
-    # Limit workers to physical cores to avoid thrashing RAM/CPU with too many SpaCy instances
-    workers = min(4, multiprocessing.cpu_count())
-    chunk_sz = max(1, len(files) // workers)
-    
-    with ProcessPoolExecutor(max_workers=workers) as executor:
-        results = list(executor.map(process_file, files, chunksize=chunk_sz))
-        
+    if not files: return []
+    # Swap to ThreadPool for pure speed and lightweight execution
+    workers = min(16, multiprocessing.cpu_count() * 4)
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        results = list(executor.map(process_file, files))
     return results
 
 
@@ -441,4 +618,10 @@ def index():
 
 
 if __name__ == "__main__":
+    # Light start
+    print("Resume Extraction Engine Started 🚀")
     app.run(debug=True, port=5000)
+
+
+
+
