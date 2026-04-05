@@ -160,7 +160,8 @@ IGNORE_ORGS = {
     'increased', 'reduced', 'saved', 'optimized', 'scaled', 'modeled', 'deployed', 'migrated', 'automated', 'integrated',
     'place', 'date', 'declaration', 'signature', 'statement', 'hereby', 'truthful', 'correct', 'best of my knowledge',
     'b.com', 'bcom', 'm.sc', 'msc', 'b.a', 'ba', 'm.a', 'ma', 'b.e', 'm.e', 'b.tech', 'm.tech', 'mba', 'mca', 'bca',
-    'implemented', 'attended', 'handled', 'prepared', 'assisted', 'reconciliation', 'management', 'services', 'coloring', 'styling', 'attending', 'executing'
+    'implemented', 'attended', 'handled', 'prepared', 'assisted', 'reconciliation', 'management', 'services', 'coloring', 'styling', 'attending', 'executing',
+    'percentage', 'cgpa', 'grade', 'score', 'marks', 'obtained', 'aggregate'
 }
 
 # High-Confidence Predefined Organization List (Ensures major names are never missed)
@@ -194,10 +195,14 @@ NAME_REGEX = re.compile(r'^[A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,2}$')
 def sanitize_filename(filename):
     # Remove extension and clean characters for Excel/Windows safety
     name = os.path.splitext(filename)[0]
+    # Remove common prefix patterns like 'india_resume_01_' or 'resume_v2_'
+    name = re.sub(r'^(?:india_|resume_)?(?:resume_|v\d_|)?\d*(?:_)?', '', name, flags=re.IGNORECASE)
     # Replace common resume junk with spaces
-    name = re.sub(r'(_| - | -|-|Resume|CV|Curriculum Vitae|Job|Apply)', ' ', name, flags=re.IGNORECASE)
+    name = re.sub(r'(_| - | -|-|Resume|CV|Curriculum Vitae|Job|Apply|Freshers|Freelance)', ' ', name, flags=re.IGNORECASE)
     # Remove digits and extra symbols
     name = re.sub(r'[^A-Za-z\s\.]', '', name)
+    # Final cleanup: if name is just 'pdf' or 'docx', return empty
+    if name.lower() in ['pdf', 'docx', 'doc', 'resume']: return ""
     return ' '.join(name.split()).title()
 
 def get_files(folder):
@@ -288,23 +293,38 @@ def parse_text(text, hidden_emails, file_name="Not Provided"):
             found_skills.add(STRICT_C_SKILLS[token])
     data["Skills"] = ", ".join(sorted(list(found_skills)))
 
-    # 4. Name (Super-Fast Regex First)
+    # 4. Name extraction - try multiple strategies
     name = ""
-    lines = [l.strip() for l in text.split("\n") if len(l.strip()) > 3][:10]
-    for line in lines:
-        if NAME_REGEX.match(line):
-            temp_name = line.strip().title()
-            # Clean salutations (Mr, Ms, Mrs, etc.)
-            temp_name = re.sub(r'^(Mr|Ms|Mrs|Miss)\.?\s+', '', temp_name, flags=re.IGNORECASE)
-            
-            # If the name is just a job title, skip it
-            if any(title.lower() in temp_name.lower() for title in ["Manager", "Scientist", "Developer", "Analyst", "Engineer"]):
-                continue
-            name = temp_name; break
+    
+    # Strategy A: Check first 1-2 lines (DOCX resumes often have name as first line)
+    first_lines = [l.strip() for l in text.split("\n") if len(l.strip()) > 1][:3]
+    for line in first_lines[:2]:
+        # Name-like: 2-3 words, all title case, no special chars, short
+        words = line.split()
+        if 2 <= len(words) <= 4 and all(w[0].isupper() for w in words if w):
+            # Not a section header or job title
+            if not any(kw in line.lower() for kw in ['resume', 'curriculum', 'profile', 'engineer', 'manager', 'developer', 'analyst', 'consultant', 'objective', 'summary', 'skills', 'contact']):
+                if NAME_REGEX.match(line) or re.match(r'^[A-Z][a-z]+(?: [A-Z][a-z.]+){1,3}$', line):
+                    temp = re.sub(r'^(Mr|Ms|Mrs|Miss|Dr)\.?\s+', '', line, flags=re.IGNORECASE).strip()
+                    if 3 < len(temp) < 50:
+                        name = temp.title()
+                        break
 
+    # Strategy B: NAME_REGEX scan across first 10 lines
+    if not name:
+        scan_lines = [l.strip() for l in text.split("\n") if len(l.strip()) > 3][:10]
+        for line in scan_lines:
+            if NAME_REGEX.match(line):
+                temp_name = line.strip().title()
+                temp_name = re.sub(r'^(Mr|Ms|Mrs|Miss|Dr)\.?\s+', '', temp_name, flags=re.IGNORECASE)
+                if not any(t.lower() in temp_name.lower() for t in ["Manager", "Scientist", "Developer", "Analyst", "Engineer", "Objective", "Summary"]):
+                    name = temp_name
+                    break
+
+    # Strategy C: Filename fallback
     if not name:
         name = sanitize_filename(data.get('File Name', '')) or "Not Provided"
-    
+
     data["Candidate Name"] = name.strip()
 
     # 4b. Location (Search entire text)
@@ -322,15 +342,25 @@ def parse_text(text, hidden_emails, file_name="Not Provided"):
     if exp_matches:
         data["Total Years of Experience"] = f"{exp_matches.group(1)} Years"
     else:
-        # Fallback: Sum up years from date ranges
-        date_ranges = re.findall(r'(\d{4})\s*(?:-|–|to)\s*(\d{4}|Present|Current|Today)', text, re.IGNORECASE)
+        # Fallback: Sum up years from date ranges (deduplicated)
+        date_ranges = re.findall(r'(\d{4})\s*(?:-|\u2013|to)\s*(\d{4}|Present|Current|Today)', text, re.IGNORECASE)
+        # Deduplicate and sort ranges to avoid double-counting
+        seen_ranges = set()
         total_yrs = 0
+        curr_year = datetime.now().year
         for start, end in date_ranges:
             s_yr = int(start)
-            e_yr = datetime.now().year if re.search(r'Present|Current|Today|Till Date', end, re.IGNORECASE) else int(end)
-            if 0 < (e_yr - s_yr) < 40: total_yrs += (e_yr - s_yr)
+            e_yr = curr_year if re.search(r'Present|Current|Today|Till Date', end, re.IGNORECASE) else int(end)
+            key = (s_yr, e_yr)
+            if key not in seen_ranges and 0 < (e_yr - s_yr) < 40 and s_yr > 1980:
+                seen_ranges.add(key)
+                total_yrs += (e_yr - s_yr)
         if total_yrs > 0:
             data["Total Years of Experience"] = f"{total_yrs} Years (Est.)"
+        elif not date_ranges:
+            # No dates found at all — likely a Fresher
+            if re.search(r'\b(fresher|fresh graduate|no experience|entry.?level|0 year)\b', text, re.IGNORECASE):
+                data["Total Years of Experience"] = "Fresher"
 
 
     # 6. Location (Redundant search removed)
@@ -382,110 +412,228 @@ def parse_text(text, hidden_emails, file_name="Not Provided"):
                 elif 0 < yr_diff < 40:
                     data["Years Worked in Current Company"] = f"{yr_diff}"
 
-        # 9c. Find Current and Previous Companies (Grammar & Length Based Strategy)
-        lines = [l.strip() for l in post_exp_text.split("\n") if len(l.strip()) > 3][:40]
+        # ============================================================
+        # 9c. DATE-ANCHORED Company Extraction Engine
+        # Works with ALL resume templates:
+        #   Format 1: "Infosys Ltd, Hyderabad – Engineer (Aug 2021 – Present)"
+        #   Format 2: "Infosys Ltd\nAug 2021 – Present"
+        #   Format 3: "Infosys Ltd\nSystems Engineer\n2021 – Present"
+        #   Format 4: "Engineer at Infosys Ltd (2021 – Present)"
+        #   Format 5: "Infosys Ltd | Engineer | 2021–Present"
+        # ============================================================
+
+        lines = [l.strip() for l in post_exp_text.split("\n") if len(l.strip()) > 2][:60]
         found_orgs_with_dates = []
         found_orgs_fallback = []
-        
-        # Action verbs that indicate a description, NOT a company name
+
         ACTION_VERBS = {
-            'led', 'built', 'developed', 'managed', 'created', 'designed', 'architected', 'improved', 'implemented', 
-            'performed', 'researched', 'analyzed', 'conducted', 'monitored', 'maintained', 'supported', 'assisted', 
-            'coordinated', 'mentored', 'increased', 'reduced', 'saved', 'optimized', 'scaled', 'modeled', 'deployed', 
-            'migrated', 'automated', 'integrated', 'achieved', 'raised', 'prepared', 'executed', 'grew', 'supervise',
-            'implement', 'management', 'handling', 'preparation', 'assisting', 'attending', 'attended', 'managing'
+            'led', 'built', 'developed', 'managed', 'created', 'designed', 'architected',
+            'improved', 'implemented', 'performed', 'researched', 'analyzed', 'conducted',
+            'monitored', 'maintained', 'supported', 'assisted', 'coordinated', 'mentored',
+            'increased', 'reduced', 'saved', 'optimized', 'scaled', 'modeled', 'deployed',
+            'migrated', 'automated', 'integrated', 'achieved', 'raised', 'prepared',
+            'executed', 'grew', 'supervised', 'implement', 'handling', 'preparation',
+            'assisting', 'attending', 'managing', 'published', 'trained', 'conducted',
+            'specialized', 'consistently', 'provided', 'reported', 'collaborated',
+            'spearheaded', 'oversaw', 'coordinated', 'processed', 'evaluated'
         }
-        COMPANY_KW = r'\b(?:Pvt|Ltd|Limited|Corp|Inc|Company|Agency|Solutions|Firm|Bank|Unicorn|Startup|Systems|Research|Aerospace|Financial|XYZ|Co|Intl|Global|Manufacturing|Institution|PDX|Hospital|Medical|Clinic|Center|Health|Services|Tech|Software|Technologies|District|CPA)\b'
-        
-        # Stricter Date Pattern for individual lines
-        STRICT_DATE_RE = re.compile(r'\b(20\d{2}|Present|Current|Till|Today)\b', re.IGNORECASE)
-        
-        for line in lines:
-            # Section Guard: Don't extract companies from the Declaration/Personal section
-            if any(term in line.lower() for term in ["declaration", "personal details", "signature", "hobbies", "interest"]):
-                break
 
-            # 1. Strip leading bullets/symbols to find the real start of text
-            line_clean = re.sub(r'^[•\-\*\d\.\s]+', '', line)
-            
-            # Hard skip for lines starting with lowercase (likely descriptions)
-            if line_clean and line_clean[0].islower():
-                continue
-                
-            words = line_clean.split()
-            first_word_clean = re.sub(r'[^A-Za-z]', '', words[0]).lower() if words else ""
-            
-            # Hard skip for education and junk action lines (Prefix check for verbs)
-            if len(words) > 7 or any(first_word_clean.startswith(v) for v in ACTION_VERBS) or first_word_clean in ['bcom', 'msc', 'mba', 'btech', 'mtech', 'account']:
-                continue
-            
-            # 2. Extract potential company part (Simplified Pipe/Comma Splitting)
-            temp_part = line
-            if "|" in line:
-                parts = [p.strip() for p in line.split("|")]
-                temp_part = parts[0]
-            elif "," in line and re.search(r'\d{4}', line):
-                # Handle "Slice (Earlier Slicepay), Bengaluru" - split by first comma if date exists
-                temp_part = line.split(",")[0]
-            elif " at " in line.lower():
-                temp_part = re.split(r'\s+at\s+', line, flags=re.IGNORECASE)[-1]
-            
-            # 3. Clean and validate company name (Remove positions from name)
-            clean_name = re.sub(r'^[•\-\*\d\.\s]+', '', temp_part) 
-            # Remove text in parentheses like "(Earlier Slicepay)"
-            clean_name = re.sub(r'\(.*?\)', '', clean_name).strip()
-            clean_name = re.sub(r'\s*\b(Present|Current|Till Date|Today)\b.*', '', clean_name, flags=re.IGNORECASE)
-            
-            # STRIKE: Remove actual position words from the name
+        EDU_JUNK = {
+            'bcom', 'msc', 'mba', 'btech', 'mtech', 'bca', 'mca', 'ba', 'ma', 'bsc',
+            'msc', 'phd', 'diploma', 'account', 'percentage', 'cgpa', 'grade', 'score',
+            'marks', 'aggregate', 'gpa', 'class'
+        }
+
+        COMPANY_KW = r'\b(?:Pvt|Ltd|Limited|Corp|Inc|Company|Agency|Solutions|Firm|Bank|'\
+                     r'Systems|Research|Financial|Hospital|Medical|Clinic|Center|Health|'\
+                     r'Services|Tech|Software|Technologies|Consulting|Consultancy|'\
+                     r'Industries|Group|Associates|Enterprises|International|Global|'\
+                     r'Manufacturing|Analytics|Digital|Networks|Media|Studios)\b'
+
+        STRICT_DATE_RE = re.compile(r'\b(20\d{2}|199\d|Present|Current|Till|Today)\b', re.IGNORECASE)
+
+        # Full date range pattern
+        DATE_RANGE_RE = re.compile(
+            r'(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\s,]*)?'
+            r'(\d{4}|Present|Current)\s*(?:-|\u2013|\u2014|to)\s*'
+            r'(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\s,]*)?'
+            r'(\d{4}|Present|Current|Till Date|Today)',
+            re.IGNORECASE
+        )
+
+        def clean_company(raw):
+            """Clean raw text into a company name."""
+            c = re.sub(r'^[\u2022\-\*\d\.\s]+', '', raw).strip()
+            c = re.sub(r'\(.*?\)', '', c).strip()  # Remove parentheses
+            c = re.sub(r'\s*\b(Present|Current|Till Date|Today)\b.*', '', c, flags=re.IGNORECASE)
             for rw in ROLE_WORDS:
-                clean_name = re.sub(r'\b' + re.escape(rw) + r'\b', '', clean_name, flags=re.IGNORECASE)
-            
-            clean_name = re.sub(r'\d{4}', '', clean_name)
-            clean_name = re.sub(r'[^A-Za-z\s\.\&\-]', '', clean_name).strip()
-            
-            # Final validation: check length and non-lower start
-            if len(clean_name) < 3 or len(clean_name) > 50 or (clean_name and clean_name[0].islower()): continue
-            if any(title.lower() in clean_name.lower() for title in IGNORE_TITLES): continue
+                c = re.sub(r'\b' + re.escape(rw) + r'\b', '', c, flags=re.IGNORECASE)
+            c = re.sub(r'199\d|20\d{2}', '', c)  # Remove years
+            # Strip trailing Indian city names (e.g. 'Infosys Ltd Hyderabad' -> 'Infosys Ltd')
+            city_suffix = r'\b(' + '|'.join(re.escape(city.title()) for city in list(INDIAN_CITIES.keys())[:60]) + r')\s*$'
+            c = re.sub(city_suffix, '', c, flags=re.IGNORECASE).strip()
+            c = re.sub(r'[^A-Za-z\s\.\&\-\'\(\)]', '', c).strip()
+            c = re.sub(r'\s*[\u2013\u2014\-]\s*$', '', c).strip()  # Trailing dashes
+            return ' '.join(c.split())
 
-            # 4. Score confidence (Look for ANY date on the line)
-            is_current = re.search(r'\b(Present|Current|Today|Till Date)\b', line, re.IGNORECASE)
-            has_any_date = STRICT_DATE_RE.search(line)
-            
-            # HIGH CONFIDENCE: Check against our predefined list first
-            is_predefined = any(po.lower() in clean_name.lower() for po in PREDEFINED_ORGS)
-            
-            # If it has a date, a Company keyword, or is a Predefined brand
-            if is_predefined or re.search(COMPANY_KW, clean_name, re.IGNORECASE) or has_any_date:
-                if not any(w.lower() in clean_name.lower() for w in IGNORE_ORGS):
-                    # If it's predefined, use the canonical name from our list
-                    if is_predefined:
-                        for po in PREDEFINED_ORGS:
-                            if po.lower() in clean_name.lower():
-                                clean_name = po
-                                break
-                    
-                    if is_current:
-                        found_orgs_with_dates.append(clean_name)
-                    else:
-                        found_orgs_fallback.append(clean_name)
+        def score_candidate(text):
+            """Score how likely a text fragment is a company name (higher = better)."""
+            if not text or len(text) < 2:
+                return 0
+            score = 0
+            txt_lower = text.lower()
+            # Has company keyword → strong signal
+            if re.search(COMPANY_KW, text, re.IGNORECASE):
+                score += 50
+            # Is in predefined brands
+            if any(po.lower() in txt_lower for po in PREDEFINED_ORGS):
+                score += 60
+            # Starts with capital → good
+            if text and text[0].isupper():
+                score += 10
+            # All words capitalized → company-like
+            words = text.split()
+            if words and sum(1 for w in words if w and w[0].isupper()) == len(words):
+                score += 15
+            # Length bonus for short names (companies are concise)
+            if len(words) <= 4:
+                score += 15
+            elif len(words) <= 6:
+                score += 5
+            elif len(words) > 8:
+                score -= 25
+            # Very long text → likely a description
+            if len(text) > 45:
+                score -= 30
+            # Contains action verbs → not a company
+            if any(re.search(r'\b' + v + r'\b', txt_lower) for v in ACTION_VERBS):
+                score -= 100
+            # Contains known skills/tools → not a company
+            SKILL_SIGNALS = {'excel', 'tally', 'python', 'java', 'sql', 'aws', 'sap',
+                             'powerpoint', 'photoshop', 'autocad', 'figma', 'r', 'ms'}
+            if any(re.search(r'\b' + s + r'\b', txt_lower) for s in SKILL_SIGNALS):
+                score -= 80
+            # Contains IGNORE_ORGS → not a company
+            if any(w in txt_lower for w in IGNORE_ORGS):
+                score -= 50
+            # Education junk → not a company
+            first_w = re.sub(r'[^a-z]', '', words[0].lower()) if words else ''
+            if first_w in EDU_JUNK:
+                score -= 100
+            # Pure date line → not a company
+            if DATE_RANGE_RE.match(text.strip()):
+                score -= 100
+            # Starts with lowercase → not a company
+            if text and text[0].islower():
+                score -= 100
+            return score
 
-        # 10. Assign based on confidence (Strict History separation)
+        # Step 1: Find all date range lines and their positions
+        date_line_set = set()
+        for i, line in enumerate(lines):
+            if DATE_RANGE_RE.search(line) or re.search(r'\b(Present|Current|Today|Till Date)\b', line, re.IGNORECASE):
+                date_line_set.add(i)
+
+        # Step 2: For each date range, find the best company candidate in surrounding lines
+        already_extracted = set()
+        for date_idx in sorted(date_line_set):
+            date_line = lines[date_idx]
+            is_current = bool(re.search(r'\b(Present|Current|Today|Till Date)\b', date_line, re.IGNORECASE))
+
+            # Collect candidate lines: current line + 3 lines before + 1 line after
+            lookback = max(0, date_idx - 4)
+            candidate_lines = lines[lookback:date_idx + 1]
+
+            best_name = None
+            best_score = 0
+
+            for cline in candidate_lines:
+                if any(term in cline.lower() for term in ['declaration', 'signature', 'hobbies', 'interest']):
+                    break
+
+                # Skip pure date lines
+                if DATE_RANGE_RE.match(cline.strip()):
+                    continue
+
+                # --- Strategy A: Line has a date inline (e.g. "Infosys Ltd – Engineer (Aug 2021)") ---
+                if STRICT_DATE_RE.search(cline):
+                    # Extract pre-date part
+                    pre_date = re.split(r'(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|\d{4})', cline, flags=re.IGNORECASE)[0]
+                    # Also try splitting on dash/en-dash before date
+                    pre_dash = re.split(r'\s*(?:[\u2013\u2014]|-{1,2})\s*(?=[A-Z]|\d{4}|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)', cline)[0]
+                    # Use the shorter of the two (more likely to be just the company)
+                    raw = pre_date if len(pre_date) < len(pre_dash) else pre_dash
+                    cleaned = clean_company(raw)
+                    # Remove location after comma: "Infosys Ltd, Hyderabad" → "Infosys Ltd"
+                    if ',' in cleaned:
+                        cleaned = cleaned.split(',')[0].strip()
+                    s = score_candidate(cleaned)
+                    if s > best_score and cleaned not in already_extracted:
+                        best_score = s
+                        best_name = cleaned
+
+                # --- Strategy B: "at" format (e.g. "Engineer at Infosys") ---
+                at_match = re.search(r'\bat\b(.+?)(?:,|\(|$)', cline, re.IGNORECASE)
+                if at_match:
+                    raw = at_match.group(1).strip()
+                    cleaned = clean_company(raw)
+                    s = score_candidate(cleaned)
+                    if s > best_score and cleaned not in already_extracted:
+                        best_score = s
+                        best_name = cleaned
+
+                # --- Strategy C: Pipe-separated line ("Company | Role | Date") ---
+                if '|' in cline:
+                    parts = [p.strip() for p in cline.split('|')]
+                    for part in parts:
+                        cleaned = clean_company(part)
+                        s = score_candidate(cleaned)
+                        if s > best_score and cleaned not in already_extracted:
+                            best_score = s
+                            best_name = cleaned
+
+                # --- Strategy D: Plain company line (separate line from date) ---
+                cleaned = clean_company(cline)
+                # Remove comma-separated location
+                if ',' in cleaned:
+                    cleaned = cleaned.split(',')[0].strip()
+                s = score_candidate(cleaned)
+                if s > best_score and cleaned not in already_extracted:
+                    best_score = s
+                    best_name = cleaned
+
+            # Accept the candidate if score is above threshold
+            if best_name and best_score >= 20 and len(best_name) >= 2:
+                # Canonicalize predefined brands
+                for po in PREDEFINED_ORGS:
+                    if po.lower() in best_name.lower():
+                        best_name = po
+                        break
+
+                already_extracted.add(best_name)
+                if is_current:
+                    found_orgs_with_dates.append(best_name)
+                else:
+                    found_orgs_fallback.append(best_name)
+
+        # 10. Assign based on confidence
         current_company = "Not Provided"
         previous_list = []
-        
-        # 1. Lock in the "Present" company first
+
         if found_orgs_with_dates:
             current_company = found_orgs_with_dates[0]
-            # Any other "Present" or "Fallback" companies go to history
             other_potential = found_orgs_with_dates[1:] + found_orgs_fallback
+        elif found_orgs_fallback:
+            current_company = found_orgs_fallback[0]
+            other_potential = found_orgs_fallback[1:]
         else:
-            if found_orgs_fallback:
-                current_company = found_orgs_fallback[0]
-                other_potential = found_orgs_fallback[1:]
-            else:
-                other_potential = []
+            other_potential = []
 
-        # 2. Collect unique previous companies
+        # Freelance/Self-employed fallback
+        if current_company == "Not Provided":
+            if re.search(r'\b(freelanc|self.?employ|self employ|independent consultant|own business|proprietor)\b', post_exp_text, re.IGNORECASE):
+                current_company = "Freelance / Self-Employed"
+
         for o in other_potential:
             if o.lower() != current_company.lower() and o.lower() not in [p.lower() for p in previous_list]:
                 previous_list.append(o)
@@ -493,6 +641,7 @@ def parse_text(text, hidden_emails, file_name="Not Provided"):
         data["Current Company"] = current_company
         if previous_list:
             data["Previous Companies"] = ", ".join(previous_list[:5])
+
 
     return data
 
@@ -554,7 +703,9 @@ def index():
                 return "Invalid ZIP file format.", 400
 
             files = get_files(folder)
+            print(f"📦 Found {len(files)} resumes in ZIP. Starting extraction...")
             results = process_all(files)
+            print(f"✅ Finished processing {len(results)} resumes. Generating Excel...")
 
             if results:
                 df = pd.DataFrame(results)[FINAL_HEADERS]
