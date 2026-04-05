@@ -54,8 +54,8 @@ NP_REGEX = re.compile(r'(?:Notice Period|NP)\s*[:\-]?\s*(\d{1,2}\s*(?:days?|mont
 CTC_REGEX = re.compile(r'(?:Current CTC|CTC)\s*[:\-]?\s*([\d\.]+\s*(?:LPA|L|lakhs?|Lacs?|k|K))', re.IGNORECASE)
 ECTC_REGEX = re.compile(r'(?:Expected CTC|ECTC)\s*[:\-]?\s*([\d\.]+\s*(?:LPA|L|lakhs?|Lacs?|k|K))', re.IGNORECASE)
 
-UG_REGEX = re.compile(r'\b(B\.?E\.?|B\.?Tech|B\.?Sc\.?|B\.?Com\.?|B\.?B\.?A\.?|B\.?C\.?A\.?|B\.?A\.?|Bachelor(?:s|' + r"'" + r's)?\s*(?:of)?\s*(?:Engineering|Technology|Science|Commerce|Arts|Business|Computer))\b', re.IGNORECASE)
-PG_REGEX = re.compile(r'\b(M\.?E\.?|M\.?Tech|M\.?Sc\.?|MBA|M\.?C\.?A\.?|M\.?A\.?|Master(?:s|' + r"'" + r's)?\s*(?:of)?\s*(?:Engineering|Technology|Science|Commerce|Arts|Business|Computer|Business Administration))\b', re.IGNORECASE)
+UG_REGEX = re.compile(r'\b(B\.?E\.?|B\.?Tech|B\.?Sc\.?|B\.?Com\.?(?:\s*\(?H\)?(?:\s*ons)?)?|B\.?B\.?A\.?|B\.?C\.?A\.?|B\.?A\.?|Bachelor(?:s|' + r"'" + r's)?\s*(?:of)?\s*(?:Engineering|Technology|Science|Commerce|Arts|Business|Computer)|M\.?B\.?B\.?S\.?|B\.?D\.?S\.?|B\.?Arch\.?|L\.?L\.?B\.?|C\.?A\.?|C\.?S\.?)\b', re.IGNORECASE)
+PG_REGEX = re.compile(r'\b(M\.?E\.?|M\.?Tech|M\.?Sc\.?|M\.?B\.?A\.?|M\.?C\.?A\.?|M\.?A\.?|Master(?:s|' + r"'" + r's)?\s*(?:of)?\s*(?:Engineering|Technology|Science|Commerce|Arts|Business|Computer|Business Administration)|M\.?D\.?|M\.?S\.?|I\.?C\.?W\.?A\.?|C\.?F\.?A\.?)\b', re.IGNORECASE)
 
 # Extended City and Location list for Indian & Global candidates
 INDIAN_CITIES = {
@@ -71,8 +71,20 @@ INDIAN_CITIES = {
     'moradabad': 'Moradabad', 'mysore': 'Mysore', 'gurgaon': 'Gurgaon', 'gurugram': 'Gurugram', 'noida': 'Noida', 'kochi': 'Kochi',
     'thiruvananthapuram': 'Thiruvananthapuram', 'bhubaneswar': 'Bhubaneswar', 'salem': 'Salem', 'warangal': 'Warangal', 'guntur': 'Guntur',
     'bhiwandi': 'Bhiwandi', 'saharanpur': 'Saharanpur', 'amravati': 'Amravati', 'bikaner': 'Bikaner', 'nanded': 'Nanded', 'kolhapur': 'Kolhapur',
-    'ajmer': 'Ajmer', 'gulbarga': 'Gulbarga', 'jamnagar': 'Jamnagar', 'ujsain': 'Ujjain', 'lonavala': 'Lonavala', 'siliguri': 'Siliguri',
+    'ajmer': 'Ajmer', 'gulbarga': 'Gulbarga', 'jamnagar': 'Jamnagar', 'ujjain': 'Ujjain', 'lonavala': 'Lonavala', 'siliguri': 'Siliguri',
     'erode': 'Erode', 'hosur': 'Hosur', 'tirupur': 'Tirupur', 'vellore': 'Vellore', 'tuticorin': 'Tuticorin', 'nellore': 'Nellore',
+    'mangalore': 'Mangalore', 'belgaum': 'Belgaum', 'davangere': 'Davangere', 'shimoga': 'Shimoga', 'tumkur': 'Tumkur', 'raichur': 'Raichur',
+    'bidar': 'Bidar', 'hassan': 'Hassan', 'bellary': 'Bellary', 'bijapur': 'Bijapur', 'trivandrum': 'Thiruvananthapuram', 'calicut': 'Kozhikode',
+    'kozhikode': 'Kozhikode', 'thrissur': 'Thrissur', 'kollam': 'Kollam', 'palakkad': 'Palakkad', 'kottayam': 'Kottayam', 'kannur': 'Kannur',
+    'alappuzha': 'Alappuzha', 'tirupati': 'Tirupati', 'kakinada': 'Kakinada', 'nellore': 'Nellore', 'kurnool': 'Kurnool', 'kadapa': 'Kadapa',
+    'rajahmundry': 'Rajahmundry', 'anantapur': 'Anantapur', 'vizianagaram': 'Vizianagaram', 'eluru': 'Eluru', 'ongole': 'Ongole', 'nandyal': 'Nandyal',
+    'tenali': 'Tenali', 'jamshedpur': 'Jamshedpur', 'ranchi': 'Ranchi', 'bokaro': 'Bokaro', 'deoghar': 'Deoghar', 'hazaribagh': 'Hazaribagh',
+    'dhanbad': 'Dhanbad', 'ujsain': 'Ujjain', 'gandhinagar': 'Gandhinagar', 'bhavnagar': 'Bhavnagar', 'jamnagar': 'Jamnagar', 'junagadh': 'Junagadh',
+    'anand': 'Anand', 'navsari': 'Navsari', 'morbi': 'Morbi', 'mehsana': 'Mehsana', 'bharuch': 'Bharuch', 'vapi': 'Vapi', 'porbandar': 'Porbandar',
+    'rohtak': 'Rohtak', 'panipat': 'Panipat', 'karnal': 'Karnal', 'sonipat': 'Sonipat', 'gurugram': 'Gurugram', 'hissar': 'Hissar',
+    'yamunanagar': 'Yamunanagar', 'panchkula': 'Panchkula', 'ambala': 'Ambala', 'kurukshetra': 'Kurukshetra', 'sirsa': 'Sirsa',
+    'shimla': 'Shimla', 'solan': 'Solan', 'mandi': 'Mandi', 'dharamsala': 'Dharamsala', 'una': 'Una', 'kullu': 'Kullu',
+    'srinagar': 'Srinagar', 'jammu': 'Jammu', 'anantnag': 'Anantnag', 'baramulla': 'Baramulla', 'udhampur': 'Udhampur', 'kathua': 'Kathua',
     'banaras': 'Varanasi', 'trichy': 'Tiruchirappalli', 'tiruchirappalli': 'Tiruchirappalli', 'prayagraj': 'Allahabad',
     'san francisco': 'San Francisco', 'new york': 'New York', 'london': 'London', 'dubai': 'Dubai', 'singapore': 'Singapore', 'seattle': 'Seattle',
     'austin': 'Austin', 'boston': 'Boston', 'chicago': 'Chicago', 'palo alto': 'Palo Alto', 'mountain view': 'Mountain View',
@@ -342,25 +354,31 @@ def parse_text(text, hidden_emails, file_name="Not Provided"):
     if exp_matches:
         data["Total Years of Experience"] = f"{exp_matches.group(1)} Years"
     else:
-        # Fallback: Sum up years from date ranges (deduplicated)
-        date_ranges = re.findall(r'(\d{4})\s*(?:-|\u2013|to)\s*(\d{4}|Present|Current|Today)', text, re.IGNORECASE)
-        # Deduplicate and sort ranges to avoid double-counting
-        seen_ranges = set()
-        total_yrs = 0
+        # Step 5 Fallback: Sum up years from date ranges (Interval Merging Algorithm)
+        date_ranges_raw = re.findall(r'\b(\d{4})\s*(?:-|\u2013|\u2014|to)\s*(\d{4}|Present|Current|Today|Till Date)\b', text, re.IGNORECASE)
+        intervals = []
         curr_year = datetime.now().year
-        for start, end in date_ranges:
+        for start, end in date_ranges_raw:
             s_yr = int(start)
             e_yr = curr_year if re.search(r'Present|Current|Today|Till Date', end, re.IGNORECASE) else int(end)
-            key = (s_yr, e_yr)
-            if key not in seen_ranges and 0 < (e_yr - s_yr) < 40 and s_yr > 1980:
-                seen_ranges.add(key)
-                total_yrs += (e_yr - s_yr)
-        if total_yrs > 0:
-            data["Total Years of Experience"] = f"{total_yrs} Years (Est.)"
-        elif not date_ranges:
-            # No dates found at all — likely a Fresher
-            if re.search(r'\b(fresher|fresh graduate|no experience|entry.?level|0 year)\b', text, re.IGNORECASE):
-                data["Total Years of Experience"] = "Fresher"
+            if 1970 < s_yr <= curr_year and 1970 < e_yr <= curr_year and s_yr <= e_yr:
+                intervals.append([s_yr, e_yr])
+        
+        if intervals:
+            # Merge overlapping intervals
+            intervals.sort(key=lambda x: x[0])
+            merged = []
+            for interval in intervals:
+                if not merged or interval[0] > merged[-1][1]:
+                    merged.append(interval)
+                else:
+                    merged[-1][1] = max(merged[-1][1], interval[1])
+            
+            total_yrs = sum(itv[1] - itv[0] for itv in merged)
+            if total_yrs > 0:
+                data["Total Years of Experience"] = f"{total_yrs} Years (Est.)"
+        elif re.search(r'\b(fresher|fresh graduate|no experience|entry.?level|0 year)\b', text, re.IGNORECASE):
+            data["Total Years of Experience"] = "Fresher"
 
 
     # 6. Location (Redundant search removed)
@@ -450,16 +468,16 @@ def parse_text(text, hidden_emails, file_name="Not Provided"):
                      r'Industries|Group|Associates|Enterprises|International|Global|'\
                      r'Manufacturing|Analytics|Digital|Networks|Media|Studios)\b'
 
-        STRICT_DATE_RE = re.compile(r'\b(20\d{2}|199\d|Present|Current|Till|Today)\b', re.IGNORECASE)
+        # Stricter Date Pattern (Handles 2023, '23, 23 after month)
+        STRICT_DATE_RE = re.compile(r'\b(20\d{2}|199\d|(?<=\s)\'(2[0-5])|(?<=\s)(2[0-5])|Present|Current|Till|Today)\b', re.IGNORECASE)
 
-        # Full date range pattern
+        # Full date range pattern (Improved for 2-digit years)
         DATE_RANGE_RE = re.compile(
-            r'(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\s,]*)?'
-            r'(\d{4}|Present|Current)\s*(?:-|\u2013|\u2014|to)\s*'
-            r'(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\s,]*)?'
-            r'(\d{4}|Present|Current|Till Date|Today)',
+            r'(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\s,\']*(\d{2,4})?|(\d{4}))\s*(?:-|\u2013|\u2014|to)\s*'
+            r'(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\s,\']*(\d{2,4})?|(\d{4}|Present|Current|Till Date|Today))',
             re.IGNORECASE
         )
+        DATE_YEAR_ONLY_RE = re.compile(r'\b(\d{4}|Present|Current)\s*[-–]\s*(\d{4}|Present|Current)\b', re.IGNORECASE)
 
         def clean_company(raw):
             """Clean raw text into a company name."""
@@ -477,55 +495,50 @@ def parse_text(text, hidden_emails, file_name="Not Provided"):
             return ' '.join(c.split())
 
         def score_candidate(text):
-            """Score how likely a text fragment is a company name (higher = better)."""
+            """Score how likely a text fragment is a company name."""
             if not text or len(text) < 2:
                 return 0
             score = 0
             txt_lower = text.lower()
-            # Has company keyword → strong signal
-            if re.search(COMPANY_KW, text, re.IGNORECASE):
-                score += 50
-            # Is in predefined brands
-            if any(po.lower() in txt_lower for po in PREDEFINED_ORGS):
-                score += 60
-            # Starts with capital → good
-            if text and text[0].isupper():
-                score += 10
-            # All words capitalized → company-like
+            
+            # --- POSITIVE SIGNALS ---
+            if re.search(COMPANY_KW, text, re.IGNORECASE): score += 50
+            if any(po.lower() in txt_lower for po in PREDEFINED_ORGS): score += 60
+            if text[0].isupper(): score += 10
+            
             words = text.split()
             if words and sum(1 for w in words if w and w[0].isupper()) == len(words):
                 score += 15
-            # Length bonus for short names (companies are concise)
-            if len(words) <= 4:
-                score += 15
-            elif len(words) <= 6:
-                score += 5
-            elif len(words) > 8:
-                score -= 25
-            # Very long text → likely a description
-            if len(text) > 45:
-                score -= 30
-            # Contains action verbs → not a company
+            
+            # Length calibration
+            if len(words) <= 4: score += 15
+            elif len(words) <= 6: score += 5
+            elif len(words) > 8: score -= 30
+            
+            # --- NEGATIVE SIGNALS (PENALITIES) ---
             if any(re.search(r'\b' + v + r'\b', txt_lower) for v in ACTION_VERBS):
                 score -= 100
-            # Contains known skills/tools → not a company
-            SKILL_SIGNALS = {'excel', 'tally', 'python', 'java', 'sql', 'aws', 'sap',
-                             'powerpoint', 'photoshop', 'autocad', 'figma', 'r', 'ms'}
+            
+            # Case 1 & 2: Projects / Internships / Academic
+            PROJECT_WORDS = {'project', 'intern', 'training', 'student', 'academic', 'thesis', 'curriculum', 'education', 'university', 'college'}
+            if any(re.search(r'\b' + w + r'\b', txt_lower) for w in PROJECT_WORDS):
+                score -= 120
+            
+            SKILL_SIGNALS = {'excel', 'tally', 'python', 'java', 'sql', 'aws', 'sap', 'powerpoint', 'photoshop', 'autocad', 'figma', 'r', 'ms'}
             if any(re.search(r'\b' + s + r'\b', txt_lower) for s in SKILL_SIGNALS):
                 score -= 80
-            # Contains IGNORE_ORGS → not a company
-            if any(w in txt_lower for w in IGNORE_ORGS):
-                score -= 50
-            # Education junk → not a company
+            
+            if any(w in txt_lower for w in IGNORE_ORGS): score -= 60
+            
             first_w = re.sub(r'[^a-z]', '', words[0].lower()) if words else ''
-            if first_w in EDU_JUNK:
+            if first_w in EDU_JUNK: score -= 100
+            
+            if DATE_RANGE_RE.match(text.strip()) or DATE_YEAR_ONLY_RE.match(text.strip()):
                 score -= 100
-            # Pure date line → not a company
-            if DATE_RANGE_RE.match(text.strip()):
-                score -= 100
-            # Starts with lowercase → not a company
-            if text and text[0].islower():
-                score -= 100
+            
+            if text[0].islower(): score -= 100
+            if len(text) > 50: score -= 40
+            
             return score
 
         # Step 1: Find all date range lines and their positions
@@ -540,8 +553,9 @@ def parse_text(text, hidden_emails, file_name="Not Provided"):
             date_line = lines[date_idx]
             is_current = bool(re.search(r'\b(Present|Current|Today|Till Date)\b', date_line, re.IGNORECASE))
 
-            # Collect candidate lines: current line + 3 lines before + 1 line after
-            lookback = max(0, date_idx - 4)
+            # Case 5: Increased window for Table Layouts
+            # Collect candidate lines: current line + 6 lines before + 1 line after
+            lookback = max(0, date_idx - 6)
             candidate_lines = lines[lookback:date_idx + 1]
 
             best_name = None
