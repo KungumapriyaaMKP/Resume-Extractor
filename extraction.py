@@ -47,15 +47,15 @@ FINAL_HEADERS = [
 EMAIL_REGEX = re.compile(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+')
 PHONE_REGEX = re.compile(r'(?:\+?\d[\d\s\-\(\)]{8,20}\d|\(\d{3}\)\s*\d{3}-\d{4})')
 
-EXP_REGEX = re.compile(r'\b(\d{1,2}(?:\.\d{1,2})?)\s*(?:\+?\s*)?(?:years?|yrs?|y)\b.*?(?:of)?\s*(?:exp(?:erience)?)\b', re.IGNORECASE)
+EXP_REGEX = re.compile(r'(\d+(?:\.\d+)?)\s*(?:years?|yrs?)\+?\s*(?:of|hands-on|work|expertise|professional|total|relevant|industry)*\s*(?:experience|expertise|work|background)?', re.IGNORECASE)
 DOB_REGEX = re.compile(r'(?:DOB|Date of[ \-]Birth)\s*[:\-]?\s*([\d]{1,2}[/\-\.][\d]{1,2}[/\-\.]([\d]{2,4}))', re.IGNORECASE)
 
 NP_REGEX = re.compile(r'(?:Notice Period|NP)\s*[:\-]?\s*(\d{1,2}\s*(?:days?|months?|weeks?)|Immediate(?:ly)?)', re.IGNORECASE)
 CTC_REGEX = re.compile(r'(?:Current CTC|CTC)\s*[:\-]?\s*([\d\.]+\s*(?:LPA|L|lakhs?|Lacs?|k|K))', re.IGNORECASE)
 ECTC_REGEX = re.compile(r'(?:Expected CTC|ECTC)\s*[:\-]?\s*([\d\.]+\s*(?:LPA|L|lakhs?|Lacs?|k|K))', re.IGNORECASE)
 
-UG_REGEX = re.compile(r'\b(B\.?E\.?|B\.?Tech|B\.?Sc\.?|B\.?Com\.?(?:\s*\(?H\)?(?:\s*ons)?)?|B\.?B\.?A\.?|B\.?C\.?A\.?|B\.?A\.?|Bachelor(?:s|' + r"'" + r's)?\s*(?:of)?\s*(?:Engineering|Technology|Science|Commerce|Arts|Business|Computer)|M\.?B\.?B\.?S\.?|B\.?D\.?S\.?|B\.?Arch\.?|L\.?L\.?B\.?|C\.?A\.?|C\.?S\.?)\b', re.IGNORECASE)
-PG_REGEX = re.compile(r'\b(M\.?E\.?|M\.?Tech|M\.?Sc\.?|M\.?B\.?A\.?|M\.?C\.?A\.?|M\.?A\.?|Master(?:s|' + r"'" + r's)?\s*(?:of)?\s*(?:Engineering|Technology|Science|Commerce|Arts|Business|Computer|Business Administration)|M\.?D\.?|M\.?S\.?|I\.?C\.?W\.?A\.?|C\.?F\.?A\.?)\b', re.IGNORECASE)
+UG_REGEX = re.compile(r'(?:^|[\s\d\-\/])(B\.?E\.?|B\.?Tech|B\.?Sc\.?|B\.?Com\.?(?:\s*\(?H\)?(?:\s*ons)?)?|B\.?B\.?A\.?|B\.?C\.?A\.?|B\.?A\.?|Bachelor(?:s|' + r"'" + r's)?\s*(?:of)?\s*(?:Engineering|Technology|Science|Commerce|Arts|Business|Computer|Computer Applications|Information Technology|Business Administration)|M\.?B\.?B\.?S\.?|B\.?D\.?S\.?|B\.?Arch\.?|L\.?L\.?B\.?|C\.?A\.?|C\.?S\.?|B\.?Ed\.?|B\.?Pharm\.?|Diploma|SSLC|HSC)\b', re.IGNORECASE)
+PG_REGEX = re.compile(r'(?:^|[\s\d\-\/])(M\.?E\.?|M\.?Tech|M\.?Sc\.?|M\.?B\.?A\.?|M\.?C\.?A\.?|M\.?A\.?|Master(?:s|' + r"'" + r's)?\s*(?:of)?\s*(?:Engineering|Technology|Science|Commerce|Arts|Business|Computer|Computer Applications|Information Technology|Business Administration)|M\.?D\.?|M\.?S\.?|I\.?C\.?W\.?A\.?|C\.?F\.?A\.?|M\.?Ed\.?|M\.?Pharm\.?|Diploma)\b', re.IGNORECASE)
 
 # Extended City and Location list for Indian & Global candidates
 INDIAN_CITIES = {
@@ -184,17 +184,135 @@ SKILL_ALIASES = {
     "security+": "Security+", "owasp": "OWASP Top 10", "firewall": "Firewall Management", "unity": "Unity 3D",
     "c# scripting": "C# Scripting", "shader graph": "Shader Graph", "photon": "Photon Networking", "agile": "Agile", "scrum": "Scrum",
     "recruitment": "Recruitment & Selection", "payroll": "Payroll Processing", "hrms": "HRMS", "darwinbox": "Darwinbox",
-    "onboarding": "Onboarding", "statutory compliance": "Statutory Compliance", "compliance": "Statutory Compliance",
-    "employee engagement": "Employee Engagement", "sap hr": "SAP HR"
+    "onboarding": "Onboarding", "statutory compliance": "Statutory Compliance",
+    "staff management": "Staff Management", "operations management": "Operations Management",
+    "inventory control": "Inventory Control", "inventory management": "Inventory Management",
+    "process improvement": "Process Improvement", "strategic procurement": "Strategic Procurement",
+    "cost optimization": "Cost Optimization", "supplier relationship": "Supplier Relationship",
+    "supply chain management": "Supply Chain Management", "scm": "Supply Chain Management",
+    "budgeting": "Budgeting", "risk management": "Risk Management", "erp systems": "ERP Systems",
+    "erp": "ERP Systems", "leadership": "Leadership", "team development": "Team Development",
+    "procurement forecasting": "Procurement Forecasting", "procurement": "Procurement",
+    "team management": "Team Management", "creativity": "Creativity", "problem solving": "Problem Solving",
+    "computer skills": "Computer Skills", "assisting the principal": "Principal Assisting",
+    "office coordination": "Office Coordination", "principal assisting": "Principal Assisting",
+    "strategic planning": "Strategic Planning",
+    "employee engagement": "Employee Engagement", "sap hr": "SAP HR",
+    "sap basis": "SAP Basis", "manufacturing": "Manufacturing", "apqp": "APQP", 
+    "root cause analysis": "Root Cause Analysis", "quality control": "Quality Control",
+    "mechanical engineering": "Mechanical Engineering", "iso 9001": "ISO 9001",
+    "ppap": "PPAP", "quality management": "Quality Management",
+    "circuit design": "Circuit Design", "pcb design": "PCB Design",
+    "schematic design": "Schematic Design", "emi-emc": "EMI-EMC Testing",
+    "hardware testing": "Hardware Testing", "footprint checking": "Footprint Checking",
+    "embedded systems": "Embedded Systems", "fpga": "FPGA",
+    "arria 10": "Intel Arria 10", "ti sitara": "Ti Sitara",
+    "i.mx 8m": "i.MX 8M", "microprocessor": "Microprocessor",
+    "bms": "BMS", "power management": "Power Management",
+    "mipi": "MIPI", "csi": "CSI", "dsi": "DSI",
+    "ddr4": "DDR4", "emmc": "eMMC", "rgmii": "RGMII",
+    "spi": "SPI", "i2c": "I2C", "sdio": "SDIO", "sai": "SAI",
+    "cadence": "Cadence", "orcad": "Orcad", "kicad": "KiCad",
+    "ltspice": "LTSpice", "tiwebench": "TiWebench",
+    "harness design": "Harness Design", "visio": "Microsoft Visio",
+    "creo": "PTC Creo", "altium": "Altium Designer",
+    "plm tools": "PLM Tools", "odoo": "Odoo",
+    "bms troubleshooting": "BMS Troubleshooting",
+    "data analysis": "Data Analysis",
+    "circuit simulation": "Circuit Simulation",
+    "sap is retail": "SAP IS Retail", "idoc processing": "Idoc Processing",
+    "retail process expertise": "Retail Process Expertise",
+    "promotion management": "Promotion Management",
+    "pos integration": "POS Integration", "e-commerce integration": "e-Commerce Integration",
+    "documentation skills": "Documentation Skills",
+    "angular.js": "Angular", "node.js": "Node.js",
+    ".net framework": ".NET Framework", "asp.net": "ASP.NET",
+    "webapi": "WebAPI", "jira": "Jira"
 }
-STRICT_C_SKILLS = {"C": "C", "R": "R"}
+STRICT_C_SKILLS = {"C++": "C++", "C#": "C#"}
 SORTED_ALIASES = sorted(list(SKILL_ALIASES.keys()), key=len, reverse=True)
 SKILL_PATTERN = re.compile(r'\b(' + '|'.join(re.escape(s) for s in SORTED_ALIASES) + r')\b', re.IGNORECASE)
-STRICT_PATTERN = re.compile(r'\b(C|R)\b')
+STRICT_PATTERN = re.compile(r'\b(C\+\+|C#)\b')
+
+LANG_REGEX = re.compile(r'\b(English|Hindi|Marathi|Gujarati|Tamil|Telugu|Kannada|Malayalam|Bengali|Punjabi|Odia|Urdu|Sanskrit|Spanish|French|German|Japanese|Mandarin)\b', re.IGNORECASE)
+
+def clean_company(text):
+    if not text: return ""
+    txt = text.strip()
+    
+    # 0. Strip section headers and bullet points
+    txt = re.sub(r'^(EXPERIENCE|WORK EXPERIENCE|PROFESSIONAL EXPERIENCE|EMPLOYMENT|03 EXPERIENCE|PROJECT|PROJECTS)\s*', '', txt, flags=re.IGNORECASE)
+    txt = re.sub(r'^[\u2022\u00b7\*\-\d\.]+\s*', '', txt)
+    
+    # 1. Strip common prefixes
+    prefixes = ['Role:', 'Position:', 'Job Title:', 'Designation:', 'Employment:', 'Organization:', 'Company:', 'Job:', 'Title:']
+    for p in prefixes:
+        if txt.lower().startswith(p.lower()):
+            txt = txt[len(p):].strip()
+            
+    # 2. Split by common role separators and take the part that looks like a company
+    for sep in [':', '-', '|', '–', '—']:
+        if sep in txt:
+            parts = txt.split(sep)
+            best_part = parts[0]
+            max_s = -100
+            for p in parts:
+                s = score_candidate(p.strip())
+                if s > max_s:
+                    max_s = s
+                    best_part = p
+            txt = best_part.strip()
+            
+    # 3. Clean common noise words and locations
+    txt = txt.strip()
+    # Remove trailing city/location (e.g. "Google, Mountain View" or "Google Pune")
+    for city in list(INDIAN_CITIES.values()) + ['Pune', 'Ambur', 'Ambur City']:
+        txt = re.sub(r'[,|\-]?\s*' + re.escape(city) + r'\b.*$', '', txt, flags=re.IGNORECASE)
+    
+    # Remove parenthetical noise like "(Phoenix Group)" or "(SOM)"
+    txt = re.sub(r'\s*\(.*?\)\s*$', '', txt)
+    
+    return txt.strip()
+
+def score_candidate(text):
+    if not text: return -100
+    txt_lower = text.lower().strip()
+    words = text.split()
+    
+    if len(words) == 0: return -100
+    
+    # Heavily penalize common technical skills or junk words
+    if txt_lower in IGNORE_ORGS or txt_lower in SKILL_ALIASES:
+        return -300
+        
+    score = 0
+    # Bonus for common company indicators
+    if re.search(COMPANY_KW, text): score += 50
+    if any(p.lower() in txt_lower for p in PREDEFINED_ORGS): score += 60
+    
+    # Bonus for Multi-word Capitalized strings (Proper Nouns)
+    if len(words) >= 2 and all(w[0].isupper() for w in words if w[0].isalpha()):
+        score += 30
+    
+    # Penalty for role words if they are the ONLY words
+    if len(words) <= 3 and any(r.lower() in txt_lower for r in ROLE_WORDS):
+        score -= 40
+        
+    # Penalty for section headers
+    if txt_lower in ['experience', 'work experience', 'education', 'skills', 'summary', 'profile']:
+        score -= 150
+        
+    # Length calibration
+    if 2 <= len(words) <= 5: score += 20
+    elif len(words) <= 6: score += 5
+    elif len(words) > 8: score -= 30
+    
+    return score
+
 
 # Organizations and Descriptions to ignore during Company extraction
 IGNORE_ORGS = {
-    'school', 'college', 'university', 'institute', 'pvt ltd', 'private limited', 'inc', 'llc', 'corporation',
+    'pvt ltd', 'private limited', 'inc', 'llc', 'corporation',
     'express', 'react', 'python', 'java', 'aws', 'amazon web services',
     'data scientist', 'software engineer', 'developer', 'account executive', 'lead', 'marketing',
     'boston', 'miami', 'columbia', 'duke', 'university of miami', 'boston university', 'duke university',
@@ -202,14 +320,19 @@ IGNORE_ORGS = {
     'project', 'responsibilities', 'achievements', 'internship', 'trainee', 'student', 'analyst', 'manager',
     'senior', 'junior', 'associate', 'lead', 'chief', 'head', 'coordinator', 'specialist', 'assistant', 'officer',
     'scientist', 'engineer', 'developer', 'consultant', 'accountant', 'executive', 'nih', 'grant', 'funding', 'investigator',
+    'full-time', 'part-time', 'contract', 'freelance', 'temporary', 'intern', 'trainee', 'apprentice', 'technical', 'technology',
+    'architect', 'specialist', 'expert', 'lead', 'coordinator', 'officer', 'representative', 'support', 'coordinator',
+    'supervisor', 'relationship', 'executive', 'officer', 'manager', 'coordinator', 'specialist', 'assistant',
     # Added "Action Verbs" to prevent job descriptions from being extracted as companies
     'led', 'built', 'developed', 'managed', 'created', 'designed', 'architected', 'improved', 'implemented', 'performed',
     'researched', 'analyzed', 'conducted', 'monitored', 'maintained', 'supported', 'assisted', 'coordinated', 'mentored',
     'increased', 'reduced', 'saved', 'optimized', 'scaled', 'modeled', 'deployed', 'migrated', 'automated', 'integrated',
+    'supervised', 'coordinated', 'processed', 'evaluated', 'achieved', 'negotiated', 'handled', 'prepared',
     'place', 'date', 'declaration', 'signature', 'statement', 'hereby', 'truthful', 'correct', 'best of my knowledge',
     'b.com', 'bcom', 'm.sc', 'msc', 'b.a', 'ba', 'm.a', 'ma', 'b.e', 'm.e', 'b.tech', 'm.tech', 'mba', 'mca', 'bca',
     'implemented', 'attended', 'handled', 'prepared', 'assisted', 'reconciliation', 'management', 'services', 'coloring', 'styling', 'attending', 'executing',
-    'percentage', 'cgpa', 'grade', 'score', 'marks', 'obtained', 'aggregate'
+    'percentage', 'cgpa', 'grade', 'score', 'marks', 'obtained', 'aggregate', 'payroll', 'consultant', 'sap',
+    'mysql', 'sql', 'postgresql', 'angular', 'node', 'node.js', 'asp.net', 'webapi', 'jira', 'git', 'github', 'html', 'css', 'python', 'java'
 }
 
 # High-Confidence Predefined Organization List (Ensures major names are never missed)
@@ -220,6 +343,16 @@ PREDEFINED_ORGS = {
     'Zomato', 'Ola', 'Uber', 'Paytm', 'PhonePe', 'Flipkart', 'Snapdeal', 'Myntra', 'Freshworks', 'Zoho', 'Postman',
     'Tech Mahindra', 'Vistara', 'IndiGo', 'Mahindra', 'Bajaj', 'Adani', 'Vedanta', 'Asian Paints', 'Titan'
 }
+
+ROLE_WORDS = {"Manager", "Scientist", "Developer", "Analyst", "Engineer", "Executive", "Associate", "Lead", "Senior", "Junior", "Coordinator", "Nurse", "RN", "Consultant", "Specialist", "Director", "Product", "Early", "Stage", "GTM", "Gtm", "Technical", "Architect", "Full-time", "Part-time", "Contractor", "Freelancer", "Supervisor", "Relationship", "Officer", "Staff", "Clerk", "Operator", "Technician", "Representative", "Head", "Principal", "Intern", "Trainee", "Retail"}
+
+COMPANY_KW = r'\b(?:Pvt|Ltd|Limited|Corp|Inc|Company|Agency|Solutions|Firm|Bank|'\
+             r'Systems|Research|Financial|Hospital|Medical|Clinic|Center|Health|'\
+             r'Services|Tech|Software|Technologies|Consulting|Consultancy|'\
+             r'Industries|Group|Associates|Enterprises|International|Global|'\
+             r'Manufacturing|Analytics|Digital|Networks|Media|Studios|'\
+             r'School|Academy|College|University|Institute|Foundation|Trust)\b'
+
 IGNORE_TITLES = {
     'B.A.', 'B.S.', 'B.B.A.', 'M.A.', 'M.S.', 'MBA', 'B.Tech', 'M.Tech', 'Engineering', 'Economics', 
     'Marketing', 'Design', 'Science', 'Arts', 'Fellow', 'Postdoctoral', 'Computer Science', 'UC Berkeley', 'NYU'
@@ -238,20 +371,32 @@ def unzip_file(zip_path, extract_to=TEMP_FOLDER):
     return extract_to
 
 
-NAME_REGEX = re.compile(r'^[A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,2}$')
+NAME_REGEX = re.compile(r'^[A-Z][A-Za-z.]*(?:\s+[A-Z][A-Za-z.]*){0,4}$')
 
 def sanitize_filename(filename):
-    # Remove extension and clean characters for Excel/Windows safety
+    # Remove extension
     name = os.path.splitext(filename)[0]
-    # Remove common prefix patterns like 'india_resume_01_' or 'resume_v2_'
+    
+    # Aggressive Split: Stop before digits, brackets, or experience markers
+    # Stops at '1' in 'Abilash_A_1yrs.pdf'
+    name = re.split(r'\[|\(|\-|\d', name)[0].strip()
+    
+    # Split camelCase or PascalCase (e.g. AbhishekJagtap -> Abhishek Jagtap)
+    name = re.sub(r'([a-z])([A-Z])', r'\1 \2', name)
+    
+    # Remove common prefix patterns
     name = re.sub(r'^(?:india_|resume_)?(?:resume_|v\d_|)?\d*(?:_)?', '', name, flags=re.IGNORECASE)
-    # Replace common resume junk with spaces
-    name = re.sub(r'(_| - | -|-|Resume|CV|Curriculum Vitae|Job|Apply|Freshers|Freelance)', ' ', name, flags=re.IGNORECASE)
-    # Remove digits and extra symbols
-    name = re.sub(r'[^A-Za-z\s\.]', '', name)
+    
+    # Replace underscores and dashes with spaces
+    name = name.replace('_', ' ').replace('-', ' ')
+    
     # Final cleanup: if name is just 'pdf' or 'docx', return empty
-    if name.lower() in ['pdf', 'docx', 'doc', 'resume']: return ""
-    return ' '.join(name.split()).title()
+    res = ' '.join(name.split()).title()
+    # Remove trailing noise words
+    res = re.sub(r'\b(Yrs?|Exp|Resume|Cv|Final|Updated|V\d+|India)\b', '', res, flags=re.IGNORECASE).strip()
+    
+    if res.lower() in ['pdf', 'docx', 'doc', 'resume', 'cv']: return ""
+    return res
 
 def get_files(folder):
     files = []
@@ -304,9 +449,6 @@ def extract_docx_data(file_path):
 
 
 def parse_text(text, hidden_emails, file_name="Not Provided"):
-    # Common position titles to ignore or split
-    # Common position titles to ignore or split
-    ROLE_WORDS = {"Manager", "Scientist", "Developer", "Analyst", "Engineer", "Executive", "Associate", "Lead", "Senior", "Junior", "Coordinator", "Nurse", "RN", "Consultant", "Specialist", "Director", "Product", "Early", "Stage", "GTM", "Gtm"}
     
     # Initialize all default empty values with professional placeholder
     data = {k: "Not Provided" for k in FINAL_HEADERS}
@@ -324,10 +466,16 @@ def parse_text(text, hidden_emails, file_name="Not Provided"):
 
     # 2. Phone
     phones = PHONE_REGEX.findall(text)
+    all_phones = []
+    seen_digits = set()
     for p in phones:
-        digits = re.sub(r'\D', '', p)
-        if len(digits) >= 10:
-            data["Candidate Contact Number"] = p.strip(); break
+        p_strip = p.strip()
+        digits = re.sub(r'\D', '', p_strip)
+        if len(digits) >= 10 and digits not in seen_digits:
+            all_phones.append(p_strip)
+            seen_digits.add(digits)
+    if all_phones:
+        data["Candidate Contact Number"] = ", ".join(all_phones)
 
     # 3. Skills
     found_skills = set()
@@ -345,29 +493,52 @@ def parse_text(text, hidden_emails, file_name="Not Provided"):
     name = ""
     
     # Strategy A: Check first 1-2 lines (DOCX resumes often have name as first line)
-    first_lines = [l.strip() for l in text.split("\n") if len(l.strip()) > 1][:3]
-    for line in first_lines[:2]:
-        # Name-like: 2-3 words, all title case, no special chars, short
+    all_lines = [l.strip() for l in text.split("\n") if len(l.strip()) > 1]
+    first_lines = all_lines[:8]
+    
+    JUNK_NAME_KEYWORDS = ['resume', 'curriculum', 'profile', 'engineer', 'manager', 'developer', 'analyst', 'consultant', 'objective', 'summary', 'skills', 'contact', 'experience', 'education', 'hobbies', 'interests', 'work', 'projects', 'employment', 'history', 'professional', 'personal', 'details', 'declaration', 'statement', 'about', 'page', 'coordinator', 'secretary', 'principal', 'sap', 'certified', 'associate', 'retail', 'specialist', 'architect']
+
+    for i, line in enumerate(first_lines[:3]):
+        # Name-like: 1-5 words, starting with Uppercase, short
         words = line.split()
-        if 2 <= len(words) <= 4 and all(w[0].isupper() for w in words if w):
+        if 1 <= len(words) <= 5 and all(w[0].isupper() for w in words if w):
             # Not a section header or job title
-            if not any(kw in line.lower() for kw in ['resume', 'curriculum', 'profile', 'engineer', 'manager', 'developer', 'analyst', 'consultant', 'objective', 'summary', 'skills', 'contact']):
-                if NAME_REGEX.match(line) or re.match(r'^[A-Z][a-z]+(?: [A-Z][a-z.]+){1,3}$', line):
+            if not any(kw in line.lower() for kw in JUNK_NAME_KEYWORDS):
+                if NAME_REGEX.match(line):
                     temp = re.sub(r'^(Mr|Ms|Mrs|Miss|Dr)\.?\s+', '', line, flags=re.IGNORECASE).strip()
-                    if 3 < len(temp) < 50:
-                        name = temp.title()
+                    
+                    # Lookahead: Join next line if it also looks like a name part
+                    if i + 1 < len(first_lines):
+                        next_line = first_lines[i+1]
+                        next_words = next_line.split()
+                        if 1 <= len(next_words) <= 4 and all(w[0].isupper() for w in next_words if w):
+                            if not any(kw in next_line.lower() for kw in JUNK_NAME_KEYWORDS):
+                                temp += " " + next_line
+                                
+                    if 3 <= len(temp) < 60:
+                        name = temp.strip()
                         break
 
     # Strategy B: NAME_REGEX scan across first 10 lines
     if not name:
-        scan_lines = [l.strip() for l in text.split("\n") if len(l.strip()) > 3][:10]
-        for line in scan_lines:
+        for i, line in enumerate(first_lines):
             if NAME_REGEX.match(line):
-                temp_name = line.strip().title()
-                temp_name = re.sub(r'^(Mr|Ms|Mrs|Miss|Dr)\.?\s+', '', temp_name, flags=re.IGNORECASE)
-                if not any(t.lower() in temp_name.lower() for t in ["Manager", "Scientist", "Developer", "Analyst", "Engineer", "Objective", "Summary"]):
+                temp_name = line.strip()
+                if not any(t.lower() in temp_name.lower() for t in JUNK_NAME_KEYWORDS + ["Experience", "Education", "Work", "Project", "Declaration", "Statement"]):
+                    # Lookahead for Strategy B too
+                    if i + 1 < len(first_lines):
+                        next_line = first_lines[i+1]
+                        if NAME_REGEX.match(next_line) and not any(t.lower() in next_line.lower() for t in JUNK_NAME_KEYWORDS):
+                            temp_name += " " + next_line
                     name = temp_name
                     break
+
+    # Final cleanup for name: Remove Mr/Ms, dots, and title case
+    if name:
+        name = re.sub(r'^(Mr|Ms|Mrs|Miss|Dr)\.?\s+', '', name, flags=re.IGNORECASE)
+        # Remove anything not letters or spaces (cleans up "Aasiya ..")
+        name = re.sub(r'[^A-Za-z\s]', ' ', name).strip()
+        name = ' '.join(name.split()).title()
 
     # Strategy C: Filename fallback
     if not name:
@@ -375,46 +546,83 @@ def parse_text(text, hidden_emails, file_name="Not Provided"):
 
     data["Candidate Name"] = name.strip()
 
-    # 4b. Location (Search entire text)
+    # 4b. Location (Prioritize Header, then Document Order)
     text_lower = text.lower()
-    for city, _ in INDIAN_CITIES.items():
-        if re.search(r'\b' + re.escape(city) + r'\b', text_lower):
-            data["Current Location"] = city.title(); break
+    lines = text_lower.split('\n')
+    header_text = '\n'.join(lines[:15])
+    
+    found_location = "Not Provided"
+    
+    # 1. Search header first (most likely current location)
+    found_cities = []
+    for city, canonical in INDIAN_CITIES.items():
+        match = re.search(r'\b' + re.escape(city) + r'\b', header_text)
+        if match:
+            found_cities.append((match.start(), canonical))
+    
+    if found_cities:
+        # Pick the city that appears EARLIEST in the header
+        found_location = sorted(found_cities, key=lambda x: x[0])[0][1]
+    else:
+        # 2. Search entire document but pick the city that appears EARLIEST
+        all_found = []
+        for city, canonical in INDIAN_CITIES.items():
+            match = re.search(r'\b' + re.escape(city) + r'\b', text_lower)
+            if match:
+                all_found.append((match.start(), canonical))
+        if all_found:
+            found_location = sorted(all_found, key=lambda x: x[0])[0][1]
+
+    data["Current Location"] = found_location
 
 
 
 
 
     # 5. Experience (Direct extraction or total calculation)
+    # 5a. First Preference: Regular text search (Explicit mention in Resume content)
     exp_matches = EXP_REGEX.search(text)
     if exp_matches:
         data["Total Years of Experience"] = f"{exp_matches.group(1)} Years"
     else:
-        # Step 5 Fallback: Sum up years from date ranges (Interval Merging Algorithm)
-        date_ranges_raw = re.findall(r'\b(\d{4})\s*(?:-|\u2013|\u2014|to)\s*(\d{4}|Present|Current|Today|Till Date)\b', text, re.IGNORECASE)
-        intervals = []
-        curr_year = datetime.now().year
-        for start, end in date_ranges_raw:
-            s_yr = int(start)
-            e_yr = curr_year if re.search(r'Present|Current|Today|Till Date', end, re.IGNORECASE) else int(end)
-            if 1970 < s_yr <= curr_year and 1970 < e_yr <= curr_year and s_yr <= e_yr:
-                intervals.append([s_yr, e_yr])
-        
-        if intervals:
-            # Merge overlapping intervals
-            intervals.sort(key=lambda x: x[0])
-            merged = []
-            for interval in intervals:
-                if not merged or interval[0] > merged[-1][1]:
-                    merged.append(interval)
-                else:
-                    merged[-1][1] = max(merged[-1][1], interval[1])
-            
-            total_yrs = sum(itv[1] - itv[0] for itv in merged)
-            if total_yrs > 0:
-                data["Total Years of Experience"] = f"{total_yrs} Years (Est.)"
-        elif re.search(r'\b(fresher|fresh graduate|no experience|entry.?level|0 year)\b', text, re.IGNORECASE):
+        # 5b. Second Preference: Try Filename (High confidence fallback)
+        fn_exp_re = re.compile(r'\[?(\d{1,2})\s*(?:yrs?|y)(?:[-_\s\.](\d{1,2})\s*(?:months?|m))?\]?', re.IGNORECASE)
+        fn_match = fn_exp_re.search(file_name)
+        if fn_match:
+            yrs = fn_match.group(1)
+            months = fn_match.group(2)
+            if months:
+                data["Total Years of Experience"] = f"{yrs} Years {months} Months"
+            else:
+                data["Total Years of Experience"] = f"{yrs} Years"
+        elif re.search(r'fresher', file_name, re.IGNORECASE):
             data["Total Years of Experience"] = "Fresher"
+        else:
+            # 5c. Third Preference: Sum up years from date ranges (Interval Merging Algorithm)
+            date_ranges_raw = re.findall(r'\b(\d{4})\s*(?:-|\u2013|\u2014|to)\s*(\d{4}|Present|Current|Today|Till Date)\b', text, re.IGNORECASE)
+            intervals = []
+            curr_year = datetime.now().year
+            for start, end in date_ranges_raw:
+                s_yr = int(start)
+                e_yr = curr_year if re.search(r'Present|Current|Today|Till Date', end, re.IGNORECASE) else int(end)
+                if 1970 < s_yr <= curr_year and 1970 < e_yr <= curr_year and s_yr <= e_yr:
+                    intervals.append([s_yr, e_yr])
+            
+            if intervals:
+                # Merge overlapping intervals
+                intervals.sort(key=lambda x: x[0])
+                merged = []
+                for interval in intervals:
+                    if not merged or interval[0] > merged[-1][1]:
+                        merged.append(interval)
+                    else:
+                        merged[-1][1] = max(merged[-1][1], interval[1])
+                
+                total_yrs = sum(itv[1] - itv[0] for itv in merged)
+                if total_yrs > 0:
+                    data["Total Years of Experience"] = f"{total_yrs} Years (Est.)"
+            elif re.search(r'\b(fresher|fresh graduate|no experience|entry.?level|0 year)\b', text, re.IGNORECASE):
+                data["Total Years of Experience"] = "Fresher"
 
 
     # 6. Location (Redundant search removed)
@@ -430,10 +638,20 @@ def parse_text(text, hidden_emails, file_name="Not Provided"):
     degrees = []
     ug_match = UG_REGEX.search(text)
     if ug_match:
-        degrees.append(ug_match.group(1).strip())
+        deg = ug_match.group(1).strip()
+        if deg.lower() == "be" and "." not in deg and not deg.isupper():
+            pass # Skip common "be" verb
+        else:
+            degrees.append(deg)
+            
     pg_match = PG_REGEX.search(text)
     if pg_match:
-        degrees.append(pg_match.group(1).strip())
+        deg = pg_match.group(1).strip()
+        if deg.lower() == "ma" and "." not in deg and not deg.isupper():
+            pass # Skip common "ma" word if it exists
+        else:
+            degrees.append(deg)
+            
     if degrees:
         data["Education (UG / PG Degree)"] = " / ".join(degrees)
 
@@ -498,11 +716,6 @@ def parse_text(text, hidden_emails, file_name="Not Provided"):
             'marks', 'aggregate', 'gpa', 'class'
         }
 
-        COMPANY_KW = r'\b(?:Pvt|Ltd|Limited|Corp|Inc|Company|Agency|Solutions|Firm|Bank|'\
-                     r'Systems|Research|Financial|Hospital|Medical|Clinic|Center|Health|'\
-                     r'Services|Tech|Software|Technologies|Consulting|Consultancy|'\
-                     r'Industries|Group|Associates|Enterprises|International|Global|'\
-                     r'Manufacturing|Analytics|Digital|Networks|Media|Studios)\b'
 
         # Stricter Date Pattern (Handles 2023, '23, 23 after month)
         STRICT_DATE_RE = re.compile(r'\b(20\d{2}|199\d|(?<=\s)\'(2[0-5])|(?<=\s)(2[0-5])|Present|Current|Till|Today)\b', re.IGNORECASE)
@@ -517,18 +730,37 @@ def parse_text(text, hidden_emails, file_name="Not Provided"):
 
         def clean_company(raw):
             """Clean raw text into a company name."""
-            c = re.sub(r'^[\u2022\-\*\d\.\s]+', '', raw).strip()
+            # Strip common Role: or Position: prefixes
+            c = re.sub(r'^(?:Role|Position|Job Title|Designation|Title)\s*[:\-]\s*', '', raw, flags=re.IGNORECASE).strip()
+            
+            # Split on colon if it looks like "Role: Company"
+            if ':' in c:
+                parts = [p.strip() for p in c.split(':')]
+                # If first part is just a role, take the second part
+                if any(rw.lower() in parts[0].lower() for rw in ROLE_WORDS) and len(parts) > 1:
+                    c = parts[1]
+                else:
+                    c = parts[0]
+
+            c = re.sub(r'^[\u2022\-\*\d\.\s]+', '', c).strip()
             c = re.sub(r'\(.*?\)', '', c).strip()  # Remove parentheses
-            c = re.sub(r'\s*\b(Present|Current|Till Date|Today)\b.*', '', c, flags=re.IGNORECASE)
+            
+            # Remove date components: Months, connectors, and years
+            months_pattern = r'\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\b'
+            connectors_pattern = r'\b(?:to|from|till|since|Present|Current|Till Date|Today)\b'
+            c = re.sub(months_pattern, ' ', c, flags=re.IGNORECASE)
+            c = re.sub(connectors_pattern, ' ', c, flags=re.IGNORECASE)
+            c = re.sub(r'\b(?:19|20)\d{2}\b', ' ', c)  # Remove years
+
             for rw in ROLE_WORDS:
                 c = re.sub(r'\b' + re.escape(rw) + r'\b', '', c, flags=re.IGNORECASE)
-            c = re.sub(r'199\d|20\d{2}', '', c)  # Remove years
+            
             # Strip trailing Indian city names (e.g. 'Infosys Ltd Hyderabad' -> 'Infosys Ltd')
             city_suffix = r'\b(' + '|'.join(re.escape(city.title()) for city in list(INDIAN_CITIES.keys())[:60]) + r')\s*$'
             c = re.sub(city_suffix, '', c, flags=re.IGNORECASE).strip()
-            c = re.sub(r'[^A-Za-z\s\.\&\-\'\(\)]', '', c).strip()
+            c = re.sub(r'[^A-Za-z\s\.\&\-\'\(\)]', ' ', c).strip()
             c = re.sub(r'\s*[\u2013\u2014\-]\s*$', '', c).strip()  # Trailing dashes
-            return ' '.join(c.split())
+            return ' '.join(c.split()).title()
 
         def score_candidate(text):
             """Score how likely a text fragment is a company name."""
@@ -544,14 +776,23 @@ def parse_text(text, hidden_emails, file_name="Not Provided"):
             
             words = text.split()
             if words and sum(1 for w in words if w and w[0].isupper()) == len(words):
-                score += 15
+                score += 25
             
             # Length calibration
-            if len(words) <= 4: score += 15
+            if 2 <= len(words) <= 5: score += 20
             elif len(words) <= 6: score += 5
             elif len(words) > 8: score -= 30
             
             # --- NEGATIVE SIGNALS (PENALITIES) ---
+            # Penalty for date-only fragments (e.g. "August To")
+            months_pattern = r'(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*'
+            connectors_pattern = r'\b(?:to|from|till|since|Present|Current|Till Date|Today)\b'
+            if re.fullmatch(r'(' + months_pattern + r'|' + connectors_pattern + r'|\s+)+', text, re.IGNORECASE):
+                score -= 300
+            
+            if len(text.split()) == 1 and text.lower() in [r.lower() for r in ROLE_WORDS]:
+                score -= 150
+
             if any(re.search(r'\b' + v + r'\b', txt_lower) for v in ACTION_VERBS):
                 score -= 100
             
@@ -560,11 +801,11 @@ def parse_text(text, hidden_emails, file_name="Not Provided"):
             if any(re.search(r'\b' + w + r'\b', txt_lower) for w in PROJECT_WORDS):
                 score -= 120
             
-            SKILL_SIGNALS = {'excel', 'tally', 'python', 'java', 'sql', 'aws', 'sap', 'powerpoint', 'photoshop', 'autocad', 'figma', 'r', 'ms'}
+            SKILL_SIGNALS = {'excel', 'tally', 'python', 'java', 'sql', 'aws', 'sap', 'powerpoint', 'photoshop', 'autocad', 'figma', 'r', 'ms', 'technical', 'data', 'architecture', 'architect'}
             if any(re.search(r'\b' + s + r'\b', txt_lower) for s in SKILL_SIGNALS):
                 score -= 80
             
-            if any(w in txt_lower for w in IGNORE_ORGS): score -= 60
+            if any(w in txt_lower for w in IGNORE_ORGS): score -= 100
             
             first_w = re.sub(r'[^a-z]', '', words[0].lower()) if words else ''
             if first_w in EDU_JUNK: score -= 100
@@ -608,12 +849,15 @@ def parse_text(text, hidden_emails, file_name="Not Provided"):
                 # --- Strategy A: Line has a date inline (e.g. "Infosys Ltd – Engineer (Aug 2021)") ---
                 if STRICT_DATE_RE.search(cline):
                     # Extract pre-date part
-                    pre_date = re.split(r'(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|\d{4})', cline, flags=re.IGNORECASE)[0]
+                    pre_parts = re.split(r'(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|\d{4})', cline, flags=re.IGNORECASE)
+                    pre_date = pre_parts[0] if pre_parts else ""
                     # Also try splitting on dash/en-dash before date
                     pre_dash = re.split(r'\s*(?:[\u2013\u2014]|-{1,2})\s*(?=[A-Z]|\d{4}|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)', cline)[0]
-                    # Use the shorter of the two (more likely to be just the company)
-                    raw = pre_date if len(pre_date) < len(pre_dash) else pre_dash
+                    # Use the shorter of the two if pre_date isn't trivial
+                    raw = pre_date if (len(pre_date) > 2 and len(pre_date) < len(pre_dash)) else pre_dash
                     cleaned = clean_company(raw)
+                    if not cleaned or len(cleaned) < 2:
+                        continue
                     # Remove location after comma: "Infosys Ltd, Hyderabad" → "Infosys Ltd"
                     if ',' in cleaned:
                         cleaned = cleaned.split(',')[0].strip()
@@ -644,9 +888,9 @@ def parse_text(text, hidden_emails, file_name="Not Provided"):
 
                 # --- Strategy D: Plain company line (separate line from date) ---
                 cleaned = clean_company(cline)
-                # Remove comma-separated location
-                if ',' in cleaned:
-                    cleaned = cleaned.split(',')[0].strip()
+                # If the line is mostly role keywords, skip it
+                if any(kw in cleaned.upper() for kw in ['TECHNICAL LEAD', 'HARDWARE ENGINEER', 'DESIGN ENGINEER', 'TECHNICAL', 'LEAD']):
+                    continue
                 s = score_candidate(cleaned)
                 if s > best_score and cleaned not in already_extracted:
                     best_score = s
@@ -654,9 +898,13 @@ def parse_text(text, hidden_emails, file_name="Not Provided"):
 
             # Accept the candidate if score is above threshold
             if best_name and best_score >= 20 and len(best_name) >= 2:
-                # Canonicalize predefined brands
+                # Canonicalize predefined brands only if the extracted name is very short or nearly identical
                 for po in PREDEFINED_ORGS:
-                    if po.lower() in best_name.lower():
+                    if po.lower() == best_name.lower():
+                        best_name = po
+                        break
+                    # If it's 1-2 words and contains the brand, but the brand is the main part
+                    if po.lower() in best_name.lower() and len(best_name.split()) <= 1:
                         best_name = po
                         break
 
